@@ -82,7 +82,7 @@ public class IncrementalIndexReadBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"onheap", "oak"})
+  @Param({"oak", "onheap"})
   private String indexType;
 
   private static final Logger log = new Logger(IncrementalIndexReadBenchmark.class);
@@ -127,30 +127,20 @@ public class IncrementalIndexReadBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
+    IncrementalIndex.Builder builder = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMetrics(schemaInfo.getAggsArray())
+                .withRollup(rollup)
+                .build()
+        )
+        .setReportParseExceptions(false)
+        .setMaxRowCount(rowsPerSegment);
     switch (indexType) {
       case "onheap":
-        return new IncrementalIndex.Builder()
-                .setIndexSchema(
-                        new IncrementalIndexSchema.Builder()
-                                .withMetrics(schemaInfo.getAggsArray())
-                                .withRollup(rollup)
-                                .build()
-                )
-                .setReportParseExceptions(false)
-                .setMaxRowCount(rowsPerSegment)
-                .buildOnheap();
+        builder.buildOnheap();
       case "oak":
-        return new IncrementalIndex.Builder()
-                .setIndexSchema(
-                        new IncrementalIndexSchema.Builder()
-                                .withMetrics(schemaInfo.getAggsArray())
-                                .withRollup(rollup)
-                                .build()
-                )
-                .setReportParseExceptions(false)
-                .setMaxRowCount(rowsPerSegment)
-                .buildOak();
-
+        builder.buildOak();
     }
     return null;
   }
@@ -218,7 +208,7 @@ public class IncrementalIndexReadBenchmark
   private Sequence<Cursor> makeCursors(IncrementalIndexStorageAdapter sa, DimFilter filter)
   {
     return sa.makeCursors(
-        filter.toFilter(),
+        filter == null ? null : filter.toFilter(),
         schemaInfo.getDataInterval(),
         VirtualColumns.EMPTY,
         Granularities.ALL,

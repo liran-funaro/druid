@@ -113,30 +113,20 @@ public class IndexIngestionBenchmark
 
   private IncrementalIndex makeIncIndex()
   {
+    IncrementalIndex.Builder builder = new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMetrics(schemaInfo.getAggsArray())
+                .withRollup(rollup)
+                .build()
+        )
+        .setReportParseExceptions(false)
+        .setMaxRowCount(rowsPerSegment * 2);
     switch (indexType) {
       case "onheap":
-        return new IncrementalIndex.Builder()
-                .setIndexSchema(
-                        new IncrementalIndexSchema.Builder()
-                                .withMetrics(schemaInfo.getAggsArray())
-                                .withRollup(rollup)
-                                .build()
-                )
-                .setReportParseExceptions(false)
-                .setMaxRowCount(rowsPerSegment * 2)
-                .buildOnheap();
+        return builder.buildOnheap();
       case "oak":
-        return new IncrementalIndex.Builder()
-                .setIndexSchema(
-                        new IncrementalIndexSchema.Builder()
-                                .withMetrics(schemaInfo.getAggsArray())
-                                .withRollup(rollup)
-                                .build()
-                )
-                .setReportParseExceptions(false)
-                .setMaxRowCount(rowsPerSegment * 2)
-                .buildOak();
-
+        return builder.buildOak();
     }
     return null;
   }
@@ -152,18 +142,5 @@ public class IndexIngestionBenchmark
       blackhole.consume(rv);
     }
   }
-
-
-  public static void main(String[] args) throws RunnerException
-  {
-    Options opt = new OptionsBuilder()
-            .include(IndexIngestionBenchmark.class.getSimpleName())
-            .threads(1)
-            .forks(1)
-            .build();
-
-    new Runner(opt).run();
-  }
-
 
 }
