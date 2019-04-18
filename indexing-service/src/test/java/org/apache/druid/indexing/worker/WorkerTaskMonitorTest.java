@@ -180,7 +180,8 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 null,
-                new NoopTestTaskReportFileWriter()
+                new NoopTestTaskReportFileWriter(),
+                false
             ),
             taskConfig,
             new NoopServiceEmitter(),

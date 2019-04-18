@@ -230,7 +230,8 @@ public class RealtimePlumberSchoolTest
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
         new CachePopulatorStats(),
-        TestHelper.makeJsonMapper()
+        TestHelper.makeJsonMapper(),
+        false
     );
 
     metrics = new FireDepartmentMetrics();
@@ -276,8 +277,8 @@ public class RealtimePlumberSchoolTest
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn()
-    );
+        tuningConfig.getDedupColumn(),
+        false);
     plumber.getSinks().put(0L, sink);
     Assert.assertNull(plumber.startJob());
 
@@ -322,8 +323,8 @@ public class RealtimePlumberSchoolTest
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn()
-    );
+        tuningConfig.getDedupColumn(),
+        false);
     plumber.getSinks().put(0L, sink);
     plumber.startJob();
     final InputRow row = EasyMock.createNiceMock(InputRow.class);
@@ -378,8 +379,8 @@ public class RealtimePlumberSchoolTest
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn()
-    );
+        tuningConfig.getDedupColumn(),
+        false);
     plumber2.getSinks().put(0L, sink);
     Assert.assertNull(plumber2.startJob());
     final CountDownLatch doneSignal = new CountDownLatch(1);

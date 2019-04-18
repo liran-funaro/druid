@@ -99,6 +99,7 @@ public class TaskToolbox
   private final DruidNode druidNode;
   private final LookupNodeService lookupNodeService;
   private final DataNodeService dataNodeService;
+  private final boolean useOak;
 
   public TaskToolbox(
       TaskConfig config,
@@ -127,7 +128,8 @@ public class TaskToolbox
       DruidNode druidNode,
       LookupNodeService lookupNodeService,
       DataNodeService dataNodeService,
-      TaskReportFileWriter taskReportFileWriter
+      TaskReportFileWriter taskReportFileWriter,
+      boolean useOak
   )
   {
     this.config = config;
@@ -158,6 +160,7 @@ public class TaskToolbox
     this.dataNodeService = dataNodeService;
     this.taskReportFileWriter = taskReportFileWriter;
     this.taskReportFileWriter.setObjectMapper(this.objectMapper);
+    this.useOak = useOak;
   }
 
   public TaskConfig getConfig()
@@ -328,5 +331,10 @@ public class TaskToolbox
   public TaskReportFileWriter getTaskReportFileWriter()
   {
     return taskReportFileWriter;
+  }
+
+  public boolean isUseOak()
+  {
+    return useOak;
   }
 }

@@ -254,8 +254,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        new NoopTestTaskReportFileWriter()
-    );
+        new NoopTestTaskFileWriter(),
+        false);
   }
 
   static class TestParallelIndexSupervisorTask extends ParallelIndexSupervisorTask

@@ -199,6 +199,8 @@ public class CliPeon extends GuiceRunnable
             binder.bind(QuerySegmentWalker.class).to(SingleTaskBackgroundRunner.class);
             binder.bind(SingleTaskBackgroundRunner.class).in(ManageLifecycle.class);
 
+            binder.bindConstant().annotatedWith(Names.named("useOak")).to(Boolean.parseBoolean(properties.getProperty("druid.indexer.useOak")));
+
             bindRealtimeCache(binder);
 
             bindCoordinatorHandoffNotiferAndClient(binder);

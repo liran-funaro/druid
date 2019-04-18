@@ -1186,7 +1186,8 @@ public class CompactionTaskTest
           null,
           null,
           null,
-          new NoopTestTaskReportFileWriter()
+          new NoopTestTaskReportFileWriter(),
+          false
       );
       this.segmentFileMap = segmentFileMap;
     }

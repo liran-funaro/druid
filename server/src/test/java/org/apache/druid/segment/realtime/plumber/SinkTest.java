@@ -92,8 +92,8 @@ public class SinkTest
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn()
-    );
+        tuningConfig.getDedupColumn(),
+        false);
 
     sink.add(
         new InputRow()
@@ -247,8 +247,8 @@ public class SinkTest
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn()
-    );
+        tuningConfig.getDedupColumn(),
+        false);
 
     int rows = sink.add(new MapBasedInputRow(
         DateTimes.of("2013-01-01"),
