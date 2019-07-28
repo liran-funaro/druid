@@ -76,7 +76,8 @@ public interface AppenderatorsManager
       ExecutorService queryExecutorService,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      boolean useOak
   );
 
   /**
@@ -90,8 +91,8 @@ public interface AppenderatorsManager
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
-      IndexMerger indexMerger
-  );
+      IndexMerger indexMerger,
+      boolean useOak);
 
   /**
    * Removes any internal Appenderator-tracking state associated with the provided taskId.

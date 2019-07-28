@@ -131,7 +131,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       ExecutorService queryExecutorService,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      boolean useOak
   )
   {
     SinkQuerySegmentWalker segmentWalker = datasourceSegmentWalkers.computeIfAbsent(
@@ -165,7 +166,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         segmentWalker,
         indexIO,
         wrapIndexMerger(indexMerger),
-        cache
+        cache,
+        useOak
     );
 
     return appenderator;
@@ -173,15 +175,15 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
 
   @Override
   public Appenderator createOfflineAppenderatorForTask(
-      String taskId,
-      DataSchema schema,
-      AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger
-  )
+          String taskId,
+          DataSchema schema,
+          AppenderatorConfig config,
+          FireDepartmentMetrics metrics,
+          DataSegmentPusher dataSegmentPusher,
+          ObjectMapper objectMapper,
+          IndexIO indexIO,
+          IndexMerger indexMerger,
+          boolean useOak)
   {
     Appenderator appenderator = Appenderators.createOffline(
         schema,
@@ -190,7 +192,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         dataSegmentPusher,
         objectMapper,
         indexIO,
-        wrapIndexMerger(indexMerger)
+        wrapIndexMerger(indexMerger),
+        useOak
     );
     return appenderator;
   }

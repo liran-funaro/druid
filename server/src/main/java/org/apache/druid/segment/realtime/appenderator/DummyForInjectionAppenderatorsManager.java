@@ -67,7 +67,8 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       ExecutorService queryExecutorService,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      boolean useOak
   )
   {
     throw new UOE(ERROR_MSG);
@@ -82,8 +83,8 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
-      IndexMerger indexMerger
-  )
+      IndexMerger indexMerger,
+      boolean useOak)
   {
     throw new UOE(ERROR_MSG);
   }

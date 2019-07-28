@@ -187,11 +187,11 @@ public class OnheapIncrementalIndexTest
     long jsSum = 0;
 
     for (IncrementalIndexRow row : indexExpr.getFacts().keySet()) {
-      exprSum += indexExpr.getMetricLongValue(row.getRowIndex(), 0);
+      exprSum += indexExpr.getMetricLongValue(row, 0);
     }
 
     for (IncrementalIndexRow row : indexJs.getFacts().keySet()) {
-      jsSum += indexJs.getMetricLongValue(row.getRowIndex(), 0);
+      jsSum += indexJs.getMetricLongValue(row, 0);
     }
 
     Assert.assertEquals(exprSum, jsSum);

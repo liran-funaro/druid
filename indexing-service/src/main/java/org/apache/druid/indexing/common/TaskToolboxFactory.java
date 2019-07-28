@@ -114,7 +114,7 @@ public class TaskToolboxFactory
       LookupNodeService lookupNodeService,
       DataNodeService dataNodeService,
       TaskReportFileWriter taskReportFileWriter,
-      @Named("useOak") boolean useOak)
+      @Named("useOak") boolean useOak
   )
   {
     this.config = config;

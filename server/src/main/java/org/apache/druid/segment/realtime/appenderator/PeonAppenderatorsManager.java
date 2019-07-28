@@ -73,7 +73,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       ExecutorService queryExecutorService,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      boolean useOak
   )
   {
     if (realtimeAppenderator != null) {
@@ -95,7 +96,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           queryExecutorService,
           cache,
           cacheConfig,
-          cachePopulatorStats
+          cachePopulatorStats,
+          useOak
       );
     }
     return realtimeAppenderator;
@@ -103,15 +105,15 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
 
   @Override
   public Appenderator createOfflineAppenderatorForTask(
-      String taskId,
-      DataSchema schema,
-      AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger
-  )
+          String taskId,
+          DataSchema schema,
+          AppenderatorConfig config,
+          FireDepartmentMetrics metrics,
+          DataSegmentPusher dataSegmentPusher,
+          ObjectMapper objectMapper,
+          IndexIO indexIO,
+          IndexMerger indexMerger,
+          boolean useOak)
   {
     // CompactionTask does run multiple sub-IndexTasks, so we allow multiple batch appenderators
     if (realtimeAppenderator != null) {
@@ -124,7 +126,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           dataSegmentPusher,
           objectMapper,
           indexIO,
-          indexMerger
+          indexMerger,
+          useOak
       );
       return batchAppenderator;
     }

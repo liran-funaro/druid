@@ -195,7 +195,8 @@ public class AppenderatorImpl implements Appenderator
         ),
         indexIO,
         indexMerger,
-        cache
+        cache,
+        useOak
     );
     log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());
   }
@@ -219,7 +220,8 @@ public class AppenderatorImpl implements Appenderator
       SinkQuerySegmentWalker sinkQuerySegmentWalker,
       IndexIO indexIO,
       IndexMerger indexMerger,
-      Cache cache
+      Cache cache,
+      boolean useOak
   )
   {
     this.schema = Preconditions.checkNotNull(schema, "schema");

@@ -62,7 +62,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       ExecutorService queryExecutorService,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      boolean useOak
   )
   {
     realtimeAppenderator = Appenderators.createRealtime(
@@ -79,22 +80,23 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         queryExecutorService,
         cache,
         cacheConfig,
-        cachePopulatorStats
+        cachePopulatorStats,
+        useOak
     );
     return realtimeAppenderator;
   }
 
   @Override
   public Appenderator createOfflineAppenderatorForTask(
-      String taskId,
-      DataSchema schema,
-      AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger
-  )
+          String taskId,
+          DataSchema schema,
+          AppenderatorConfig config,
+          FireDepartmentMetrics metrics,
+          DataSegmentPusher dataSegmentPusher,
+          ObjectMapper objectMapper,
+          IndexIO indexIO,
+          IndexMerger indexMerger,
+          boolean useOak)
   {
     return Appenderators.createOffline(
         schema,
@@ -103,7 +105,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         dataSegmentPusher,
         objectMapper,
         indexIO,
-        indexMerger
+        indexMerger,
+        useOak
     );
   }
 
