@@ -56,10 +56,6 @@ import java.util.function.Function;
  */
 public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
 {
-
-
-
-
   private final OakFactsHolder facts;
   private AggsManager aggsManager;
 
@@ -432,9 +428,9 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
         try (OakMap<IncrementalIndexRow, Row> subMap = oak.subMap(from, true, to, false, descending)) {
           Iterator<Map.Entry<OakRBuffer, OakRBuffer>> iterator = subMap
                   .zc()
-                  .entrySet()
+                  .entryStreamSet()
                   .iterator();
-          //TODO YONIGO - what sorcery is this transform function doing to allow this?!
+
           return Iterators.transform(iterator,
               entry -> new OakIncrementalIndexRow(entry.getKey(), dimensionDescsList, entry.getValue()));
         }
