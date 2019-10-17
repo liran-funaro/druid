@@ -117,9 +117,10 @@ public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
 
 
   @Override
-  public int compareSerializedKeyAndKey(ByteBuffer lhs, IncrementalIndexRow rhs)
+  public int compareKeyAndSerializedKey(IncrementalIndexRow lhs, ByteBuffer rhs)
+
   {
-    return compare(new OakBufferIncrementalIndexRow(lhs), rhs);
+    return compare(lhs, new OakBufferIncrementalIndexRow(rhs));
   }
 
   private static boolean allNull(IncrementalIndexRow row, int startPosition)
