@@ -40,8 +40,7 @@ public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
     this.rollup = rollup;
   }
 
-
-  private int compare(IncrementalIndexRow lhs, IncrementalIndexRow rhs)
+  public int compare(IncrementalIndexRow lhs, IncrementalIndexRow rhs)
   {
     int retVal = Longs.compare(lhs.getTimestamp(), rhs.getTimestamp());
     int lhsDimsLength = lhs.getDimsLength();
