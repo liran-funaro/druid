@@ -369,7 +369,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
               .setKeySerializer(new OakKeySerializer(dimensionDescsList))
               .setValueSerializer(new OakValueSerializer(aggsManager, in))
               .setMinKey(getMinIncrementalIndexRow())
-              .setMemoryCapacity(((long)Integer.MAX_VALUE)); // 2GB, to be configured
+              .setMemoryCapacity(((long) Integer.MAX_VALUE) * 8); // 16GB, to be configured
       oak = builder.build();
       this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
       this.dimensionDescsList = dimensionDescsList;
