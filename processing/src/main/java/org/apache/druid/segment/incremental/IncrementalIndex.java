@@ -428,19 +428,18 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     public IncrementalIndex buildOnheap()
     {
-      return buildOak();
-//      if (maxRowCount <= 0) {
-//        throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
-//      }
-//      return new OnheapIncrementalIndex(
-//          Objects.requireNonNull(incrementalIndexSchema, "incrementIndexSchema is null"),
-//          deserializeComplexMetrics,
-//          reportParseExceptions,
-//          concurrentEventAdd,
-//          sortFacts,
-//          maxRowCount,
-//          maxBytesInMemory
-//      );
+      if (maxRowCount <= 0) {
+        throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
+      }
+      return new OnheapIncrementalIndex(
+          Objects.requireNonNull(incrementalIndexSchema, "incrementIndexSchema is null"),
+          deserializeComplexMetrics,
+          reportParseExceptions,
+          concurrentEventAdd,
+          sortFacts,
+          maxRowCount,
+          maxBytesInMemory
+      );
     }
 
     public IncrementalIndex buildOffheap(final NonBlockingPool<ByteBuffer> bufferPool)
