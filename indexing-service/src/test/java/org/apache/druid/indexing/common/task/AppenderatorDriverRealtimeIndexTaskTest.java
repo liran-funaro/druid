@@ -1620,7 +1620,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
         new SingleFileTaskReportFileWriter(reportsFile),
-        null
+        null,
+        "onheap"
     );
   }
 

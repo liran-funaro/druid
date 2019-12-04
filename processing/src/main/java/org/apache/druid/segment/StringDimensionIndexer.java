@@ -450,11 +450,18 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       @Override
       public IndexedInts getRow()
       {
-        final Object[] dims = currEntry.get().getDims();
+        IncrementalIndexRow key = currEntry.get();
+
+        if (key.avoidDoubleCopyStringDim()) {
+          // TODO Liran: This is unclear. Add better explanation.
+          // incase of oak the key is serialized so its a waste to copy array twice.
+          indexedInts.setValues(key, dimIndex);
+          return indexedInts;
+        }
 
         int[] indices;
-        if (dimIndex < dims.length) {
-          indices = (int[]) dims[dimIndex];
+        if (dimIndex < key.getDimsLength()) {
+          indices = (int[]) key.getDim(dimIndex);
         } else {
           indices = null;
         }
@@ -504,12 +511,12 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
               @Override
               public boolean matches()
               {
-                Object[] dims = currEntry.get().getDims();
-                if (dimIndex >= dims.length) {
+                IncrementalIndexRow key = currEntry.get();
+                if (dimIndex >= key.getDimsLength()) {
                   return value == null;
                 }
 
-                int[] dimsInt = (int[]) dims[dimIndex];
+                int[] dimsInt = (int[]) key.getDim(dimIndex);
                 if (dimsInt == null || dimsInt.length == 0) {
                   return value == null;
                 }
@@ -550,12 +557,12 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
           @Override
           public boolean matches()
           {
-            Object[] dims = currEntry.get().getDims();
-            if (dimIndex >= dims.length) {
+            IncrementalIndexRow key = currEntry.get();
+            if (dimIndex >= key.getDimsLength()) {
               return matchNull;
             }
 
-            int[] dimsInt = (int[]) dims[dimIndex];
+            int[] dimsInt = (int[]) key.getDim(dimIndex);
             if (dimsInt == null || dimsInt.length == 0) {
               return matchNull;
             }
@@ -635,12 +642,12 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
           return null;
         }
 
-        Object[] dims = key.getDims();
-        if (dimIndex >= dims.length) {
+        Object dim = key.getDim(dimIndex);
+        if (dim == null) {
           return null;
         }
 
-        return convertUnsortedEncodedKeyComponentToActualList((int[]) dims[dimIndex]);
+        return convertUnsortedEncodedKeyComponentToActualList((int[]) key.getDim(dimIndex));
       }
 
       @SuppressWarnings("deprecation")

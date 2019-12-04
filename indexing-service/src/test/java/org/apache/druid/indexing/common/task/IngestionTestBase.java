@@ -320,7 +320,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             null,
             null,
             new SingleFileTaskReportFileWriter(taskReportsFile),
-            null
+            null,
+            "onheap"
         );
 
         if (task.isReady(box.getTaskActionClient())) {

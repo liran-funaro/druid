@@ -54,7 +54,8 @@ public class Appenderators
       ExecutorService queryExecutorService,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      String incrementalIndexImpl
   )
   {
     return new AppenderatorImpl(
@@ -81,7 +82,8 @@ public class Appenderators
         ),
         indexIO,
         indexMerger,
-        cache
+        cache,
+        incrementalIndexImpl
     );
   }
 
@@ -94,7 +96,8 @@ public class Appenderators
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
-      IndexMerger indexMerger
+      IndexMerger indexMerger,
+      String incrementalIndexImpl
   )
   {
     return new AppenderatorImpl(
@@ -134,7 +137,8 @@ public class Appenderators
         null,
         indexIO,
         indexMerger,
-        null
+        null,
+        incrementalIndexImpl
     );
   }
 }

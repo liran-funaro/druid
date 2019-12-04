@@ -101,6 +101,7 @@ public class TaskToolbox
   private final LookupNodeService lookupNodeService;
   private final DataNodeService dataNodeService;
   private final IntermediaryDataManager intermediaryDataManager;
+  private final String IncrementalIndexImpl;
 
   public TaskToolbox(
       TaskConfig config,
@@ -130,7 +131,8 @@ public class TaskToolbox
       LookupNodeService lookupNodeService,
       DataNodeService dataNodeService,
       TaskReportFileWriter taskReportFileWriter,
-      IntermediaryDataManager intermediaryDataManager
+      IntermediaryDataManager intermediaryDataManager,
+      String IncrementalIndexImpl
   )
   {
     this.config = config;
@@ -162,6 +164,7 @@ public class TaskToolbox
     this.taskReportFileWriter = taskReportFileWriter;
     this.taskReportFileWriter.setObjectMapper(this.jsonMapper);
     this.intermediaryDataManager = intermediaryDataManager;
+    this.IncrementalIndexImpl = IncrementalIndexImpl;
   }
 
   public TaskConfig getConfig()
@@ -337,5 +340,10 @@ public class TaskToolbox
   public IntermediaryDataManager getIntermediaryDataManager()
   {
     return intermediaryDataManager;
+  }
+
+  public String getIncrementalIndexName()
+  {
+    return IncrementalIndexImpl;
   }
 }

@@ -106,20 +106,19 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       @Override
       public boolean isNull()
       {
-        final Object[] dims = currEntry.get().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
+        return currEntry.get().getDim(dimIndex) == null;
       }
 
       @Override
       public double getDouble()
       {
-        final Object[] dims = currEntry.get().getDims();
+        final Object dim = currEntry.get().getDim(dimIndex);
 
-        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+        if (dim == null) {
           assert NullHandling.replaceWithDefault();
           return 0.0;
         }
-        return (Double) dims[dimIndex];
+        return (Double) dim;
       }
 
       @SuppressWarnings("deprecation")
@@ -127,12 +126,12 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       @Override
       public Double getObject()
       {
-        final Object[] dims = currEntry.get().getDims();
+        final Object dim = currEntry.get().getDim(dimIndex);
 
-        if (dimIndex >= dims.length) {
+        if (dim == null) {
           return null;
         }
-        return (Double) dims[dimIndex];
+        return (Double) dim;
       }
 
       @Override

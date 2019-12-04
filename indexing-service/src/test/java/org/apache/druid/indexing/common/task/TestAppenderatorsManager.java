@@ -62,7 +62,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       ExecutorService queryExecutorService,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      String incrementalIndexImpl
   )
   {
     realtimeAppenderator = Appenderators.createRealtime(
@@ -80,7 +81,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         queryExecutorService,
         cache,
         cacheConfig,
-        cachePopulatorStats
+        cachePopulatorStats,
+        incrementalIndexImpl
     );
     return realtimeAppenderator;
   }
@@ -95,7 +97,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
-      IndexMerger indexMerger
+      IndexMerger indexMerger,
+      String incrementalIndexImpl
   )
   {
     return Appenderators.createOffline(
@@ -107,7 +110,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         dataSegmentPusher,
         objectMapper,
         indexIO,
-        indexMerger
+        indexMerger,
+        incrementalIndexImpl
     );
   }
 

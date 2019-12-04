@@ -74,7 +74,8 @@ public final class BatchAppenderators
         segmentPusher,
         toolbox.getJsonMapper(),
         toolbox.getIndexIO(),
-        toolbox.getIndexMergerV9()
+        toolbox.getIndexMergerV9(),
+        toolbox.getIncrementalIndexName()
     );
   }
 

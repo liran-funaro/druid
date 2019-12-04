@@ -230,7 +230,8 @@ public class RealtimePlumberSchoolTest
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
         new CachePopulatorStats(),
-        TestHelper.makeJsonMapper()
+        TestHelper.makeJsonMapper(),
+        "onheap"
     );
 
     metrics = new FireDepartmentMetrics();
@@ -276,7 +277,8 @@ public class RealtimePlumberSchoolTest
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn()
+        tuningConfig.getDedupColumn(),
+        "onheap"
     );
     plumber.getSinks().put(0L, sink);
     Assert.assertNull(plumber.startJob());
@@ -322,7 +324,8 @@ public class RealtimePlumberSchoolTest
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn()
+        tuningConfig.getDedupColumn(),
+        "onheap"
     );
     plumber.getSinks().put(0L, sink);
     plumber.startJob();
@@ -373,7 +376,8 @@ public class RealtimePlumberSchoolTest
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn()
+        tuningConfig.getDedupColumn(),
+        "onheap"
     );
     plumber2.getSinks().put(0L, sink);
     Assert.assertNull(plumber2.startJob());

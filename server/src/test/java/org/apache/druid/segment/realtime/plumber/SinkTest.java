@@ -93,7 +93,8 @@ public class SinkTest
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn()
+        tuningConfig.getDedupColumn(),
+        "onheap"
     );
 
     sink.add(
@@ -248,7 +249,8 @@ public class SinkTest
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn()
+        tuningConfig.getDedupColumn(),
+        "onheap"
     );
 
     int rows = sink.add(new MapBasedInputRow(

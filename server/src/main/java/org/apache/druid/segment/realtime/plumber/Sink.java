@@ -77,6 +77,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private volatile boolean writable = true;
   private final String dedupColumn;
   private final Set<Long> dedupSet = new HashSet<>();
+  private final String incrementalIndexImpl;
 
   public Sink(
       Interval interval,
@@ -86,7 +87,8 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       int maxRowsInMemory,
       long maxBytesInMemory,
       boolean reportParseExceptions,
-      String dedupColumn
+      String dedupColumn,
+      String incrementalIndexImpl
   )
   {
     this(
@@ -99,33 +101,8 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         maxBytesInMemory,
         reportParseExceptions,
         dedupColumn,
-        Collections.emptyList()
-    );
-  }
-
-  public Sink(
-      Interval interval,
-      DataSchema schema,
-      ShardSpec shardSpec,
-      @Nullable CompactionState compactionState,
-      String version,
-      int maxRowsInMemory,
-      long maxBytesInMemory,
-      boolean reportParseExceptions,
-      String dedupColumn
-  )
-  {
-    this(
-        interval,
-        schema,
-        shardSpec,
-        compactionState,
-        version,
-        maxRowsInMemory,
-        maxBytesInMemory,
-        reportParseExceptions,
-        dedupColumn,
-        Collections.emptyList()
+        Collections.emptyList(),
+        incrementalIndexImpl
     );
   }
 
@@ -139,7 +116,36 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       long maxBytesInMemory,
       boolean reportParseExceptions,
       String dedupColumn,
-      List<FireHydrant> hydrants
+      String incrementalIndexImpl
+  )
+  {
+    this(
+        interval,
+        schema,
+        shardSpec,
+        compactionState,
+        version,
+        maxRowsInMemory,
+        maxBytesInMemory,
+        reportParseExceptions,
+        dedupColumn,
+        Collections.emptyList(),
+        incrementalIndexImpl
+    );
+  }
+
+  public Sink(
+      Interval interval,
+      DataSchema schema,
+      ShardSpec shardSpec,
+      @Nullable CompactionState compactionState,
+      String version,
+      int maxRowsInMemory,
+      long maxBytesInMemory,
+      boolean reportParseExceptions,
+      String dedupColumn,
+      List<FireHydrant> hydrants,
+      String incrementalIndexImpl
   )
   {
     this.schema = schema;
@@ -151,6 +157,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     this.maxBytesInMemory = maxBytesInMemory;
     this.reportParseExceptions = reportParseExceptions;
     this.dedupColumn = dedupColumn;
+    this.incrementalIndexImpl = incrementalIndexImpl;
 
     int maxCount = -1;
     for (int i = 0; i < hydrants.size(); ++i) {
@@ -365,7 +372,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         .setReportParseExceptions(reportParseExceptions)
         .setMaxRowCount(maxRowsInMemory)
         .setMaxBytesInMemory(maxBytesInMemory)
-        .buildOnheap();
+        .build(incrementalIndexImpl);
 
     final FireHydrant old;
     synchronized (hydrantLock) {

@@ -150,6 +150,7 @@ public class AppenderatorImpl implements Appenderator
   private volatile FileChannel basePersistDirLockChannel = null;
 
   private volatile Throwable persistError;
+  private String incrementalIndexImpl;
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
@@ -172,7 +173,8 @@ public class AppenderatorImpl implements Appenderator
       @Nullable SinkQuerySegmentWalker sinkQuerySegmentWalker,
       IndexIO indexIO,
       IndexMerger indexMerger,
-      Cache cache
+      Cache cache,
+      String incrementalIndexImpl
   )
   {
     this.myId = id;
@@ -187,6 +189,7 @@ public class AppenderatorImpl implements Appenderator
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
     this.cache = cache;
     this.texasRanger = sinkQuerySegmentWalker;
+    this.incrementalIndexImpl = incrementalIndexImpl;
 
     if (sinkQuerySegmentWalker == null) {
       this.sinkTimeline = new VersionedIntervalTimeline<>(
@@ -403,7 +406,8 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
           tuningConfig.isReportParseExceptions(),
-          null
+          null,
+          incrementalIndexImpl
       );
 
       try {
@@ -1123,7 +1127,8 @@ public class AppenderatorImpl implements Appenderator
             maxBytesTuningConfig,
             tuningConfig.isReportParseExceptions(),
             null,
-            hydrants
+            hydrants,
+            "onheap"
         );
         rowsSoFar += currSink.getNumRows();
         sinks.put(identifier, currSink);

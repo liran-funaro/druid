@@ -76,7 +76,8 @@ public interface AppenderatorsManager
       ExecutorService queryExecutorService,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      String incrementalIndexImpl
   );
 
   /**
@@ -91,7 +92,8 @@ public interface AppenderatorsManager
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
-      IndexMerger indexMerger
+      IndexMerger indexMerger,
+      String incrementalIndexImpl
   );
 
   /**

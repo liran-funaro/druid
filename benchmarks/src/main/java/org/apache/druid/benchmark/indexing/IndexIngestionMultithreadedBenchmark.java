@@ -22,8 +22,8 @@ package org.apache.druid.benchmark.indexing;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -43,15 +43,20 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 10)
 @Measurement(iterations = 25)
-public class IndexIngestionBenchmark
+public class IndexIngestionMultithreadedBenchmark
 {
   @Param({"75000"})
   private int rowsPerSegment;
@@ -68,18 +73,15 @@ public class IndexIngestionBenchmark
   private static final Logger log = new Logger(IndexIngestionBenchmark.class);
   private static final int RNG_SEED = 9999;
 
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private IncrementalIndex incIndex;
   private ArrayList<InputRow> rows;
   private BenchmarkSchemaInfo schemaInfo;
+  AtomicInteger threadIdAllocator = new AtomicInteger(0);
 
   @Setup
   public void setup()
   {
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
 
     rows = new ArrayList<InputRow>();
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
@@ -96,7 +98,20 @@ public class IndexIngestionBenchmark
       if (i % 10000 == 0) {
         log.info(i + " rows generated.");
       }
+
       rows.add(row);
+    }
+  }
+
+  @State(Scope.Thread)
+  public static class ThreadState
+  {
+    int id = 0;
+
+    @Setup
+    public void setup(IndexIngestionMultithreadedBenchmark globalState)
+    {
+      id = globalState.threadIdAllocator.getAndIncrement();
     }
   }
 
@@ -106,7 +121,7 @@ public class IndexIngestionBenchmark
     incIndex = makeIncIndex();
   }
 
-  @TearDown(Level.Invocation)
+  @TearDown(Level.Iteration)
   public void tearDown()
   {
     incIndex.close();
@@ -127,14 +142,28 @@ public class IndexIngestionBenchmark
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
+  @BenchmarkMode(Mode.SingleShotTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void addRows(Blackhole blackhole) throws Exception
+  public void addRows(Blackhole blackhole, ThreadState threadState) throws Exception
   {
-    for (int i = 0; i < rowsPerSegment; i++) {
+    int threads = threadIdAllocator.get();
+    for (int i = threadState.id; i < rowsPerSegment; i += threads) {
       InputRow row = rows.get(i);
       int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
+  }
+
+  public static void main(String[] args) throws RunnerException
+  {
+    Options opt = new OptionsBuilder()
+        .include(IndexIngestionMultithreadedBenchmark.class.getSimpleName())
+        .forks(1)
+        .threads(4)
+        .param("indexType", "oak")
+        .param("rollup", "false")
+        .build();
+
+    new Runner(opt).run();
   }
 }

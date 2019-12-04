@@ -183,7 +183,8 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 new NoopTestTaskReportFileWriter(),
-                null
+                null,
+                "onheap"
             ),
             taskConfig,
             new NoopServiceEmitter(),

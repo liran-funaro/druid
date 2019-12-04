@@ -2680,7 +2680,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
         new SingleFileTaskReportFileWriter(reportsFile),
-        null
+        null,
+        "onheap"
     );
   }
 }

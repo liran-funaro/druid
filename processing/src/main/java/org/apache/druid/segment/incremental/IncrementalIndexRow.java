@@ -30,7 +30,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public final class IncrementalIndexRow
+public class IncrementalIndexRow
 {
   public static final int EMPTY_ROW_INDEX = -1;
 
@@ -97,10 +97,19 @@ public final class IncrementalIndexRow
     return timestamp;
   }
 
-  public Object[] getDims()
+  public Object getDim(int index)
   {
-    return dims;
+    if (dims == null || index >= dims.length) {
+      return null;
+    }
+    return dims[index];
   }
+
+  public int getDimsLength()
+  {
+    return dims == null ? 0 : dims.length;
+  }
+
 
   public int getRowIndex()
   {
@@ -187,5 +196,33 @@ public final class IncrementalIndexRow
       hash = 31 * hash + indexer.getUnsortedEncodedKeyComponentHashCode(dims[i]);
     }
     return hash;
+  }
+
+  boolean isDimNull(int index)
+  {
+    return (dims == null) || (index >= dims.length) || (dims[index] == null);
+  }
+
+  public boolean avoidDoubleCopyStringDim()
+  {
+    // TODO Liran: Should explain here what is the meaning of "String Dim"
+    return false;
+  }
+
+  public int stringDimSize(int dimIndex)
+  {
+    // TODO Liran: Should explain here what is the meaning of "String Dim"
+    if (isDimNull(dimIndex)) {
+      return 0;
+    }
+
+    return ((int[]) dims[dimIndex]).length;
+  }
+
+  public int copyStringDim(int dimIndex, int[] expansion)
+  {
+    // TODO Liran: Should explain here what is the meaning of "String Dim"
+    // This function will never be called when avoidDoubleCopyStringDim() returns false
+    throw new UnsupportedOperationException();
   }
 }
