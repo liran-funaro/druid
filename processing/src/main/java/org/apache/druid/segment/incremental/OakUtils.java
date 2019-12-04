@@ -101,27 +101,33 @@ public final class OakUtils
     return dimObject;
   }
 
+  static final ValueType[] VALUE_ORDINAL_TYPES = ValueType.values();
+
   static Object getDimValue(ByteBuffer buff, int dimIndex)
   {
-    Object dimObject = null;
     int dimIndexInBuffer = buff.position() + getDimIndexInBuffer(dimIndex);
     int dimType = buff.getInt(dimIndexInBuffer);
-    if (dimType == NO_DIM) {
+
+    if (dimType == NO_DIM || dimType < 0 || dimType >= VALUE_ORDINAL_TYPES.length) {
       return null;
-    } else if (dimType == ValueType.DOUBLE.ordinal()) {
-      dimObject = buff.getDouble(dimIndexInBuffer + DATA_OFFSET);
-    } else if (dimType == ValueType.FLOAT.ordinal()) {
-      dimObject = buff.getFloat(dimIndexInBuffer + DATA_OFFSET);
-    } else if (dimType == ValueType.LONG.ordinal()) {
-      dimObject = buff.getLong(dimIndexInBuffer + DATA_OFFSET);
-    } else if (dimType == ValueType.STRING.ordinal()) {
-      int arrayIndexOffset = buff.getInt(dimIndexInBuffer + ARRAY_INDEX_OFFSET);
-      int arrayIndex = buff.position() + arrayIndexOffset;
-      int arraySize = buff.getInt(dimIndexInBuffer + ARRAY_LENGTH_OFFSET);
-      int[] array = new int[arraySize];
-      UnsafeUtils.unsafeCopyBufferToIntArray(buff, arrayIndex, array, arraySize);
-      dimObject = array;
     }
-    return dimObject;
+
+    switch (VALUE_ORDINAL_TYPES[dimType]) {
+      case DOUBLE:
+        return buff.getDouble(dimIndexInBuffer + DATA_OFFSET);
+      case FLOAT:
+        return buff.getFloat(dimIndexInBuffer + DATA_OFFSET);
+      case LONG:
+        return buff.getLong(dimIndexInBuffer + DATA_OFFSET);
+      case STRING:
+        int arrayIndexOffset = buff.getInt(dimIndexInBuffer + ARRAY_INDEX_OFFSET);
+        int arrayIndex = buff.position() + arrayIndexOffset;
+        int arraySize = buff.getInt(dimIndexInBuffer + ARRAY_LENGTH_OFFSET);
+        int[] array = new int[arraySize];
+        UnsafeUtils.unsafeCopyBufferToIntArray(buff, arrayIndex, array, arraySize);
+        return array;
+      default:
+        return null;
+    }
   }
 }
