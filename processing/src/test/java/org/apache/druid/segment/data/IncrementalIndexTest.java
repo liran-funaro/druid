@@ -108,42 +108,78 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     RESOURCE_CLOSER.close();
   }
 
+  private final String testName;
   private final IndexCreator indexCreator;
 
   @Rule
   public final CloserRule closerRule = new CloserRule(false);
 
-  public IncrementalIndexTest(IndexCreator indexCreator)
+  public IncrementalIndexTest(String testName, IndexCreator indexCreator)
   {
+    this.testName = testName;
     this.indexCreator = indexCreator;
   }
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{index}: {0}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> params = new ArrayList<>();
-    params.add(new Object[] {(IndexCreator) IncrementalIndexTest::createIndex});
-    final CloseableStupidPool<ByteBuffer> pool1 = new CloseableStupidPool<>(
-        "OffheapIncrementalIndex-bufferPool",
-        () -> ByteBuffer.allocate(256 * 1024)
-    );
-    RESOURCE_CLOSER.register(pool1);
+    params.add(new Object[] {"onheap, rollup=true", (IndexCreator) IncrementalIndexTest::createIndex});
+
     params.add(
         new Object[] {
-            (IndexCreator) factories -> new Builder()
-                .setSimpleTestingIndexSchema(factories)
-                .setMaxRowCount(1000000)
-                .buildOffheap(pool1)
+            "offheap, rollup=true",
+            (IndexCreator) factories -> {
+              final CloseableStupidPool<ByteBuffer> pool1 = new CloseableStupidPool<>(
+                  "OffheapIncrementalIndex-bufferPool",
+                  () -> ByteBuffer.allocate(256 * 1024)
+              );
+              RESOURCE_CLOSER.register(pool1);
+              return new Builder()
+                  .setSimpleTestingIndexSchema(factories)
+                  .setMaxRowCount(1000000)
+                  .buildOffheap(pool1);
+            }
         }
     );
-    params.add(new Object[] {(IndexCreator) IncrementalIndexTest::createNoRollupIndex});
-    final CloseableStupidPool<ByteBuffer> pool2 = new CloseableStupidPool<>(
-        "OffheapIncrementalIndex-bufferPool",
-        () -> ByteBuffer.allocate(256 * 1024)
-    );
-    RESOURCE_CLOSER.register(pool2);
+
     params.add(
         new Object[] {
+            "oak, rollup=true",
+            (IndexCreator) factories -> new Builder()
+                .setSimpleTestingIndexSchema(true, factories)
+                .setMaxRowCount(1000000)
+                .buildOak()
+        }
+    );
+
+    params.add(new Object[] {"onheap, rollup=false", (IndexCreator) IncrementalIndexTest::createNoRollupIndex});
+
+    params.add(
+        new Object[] {
+            "offheap, rollup=false",
+            (IndexCreator) factories -> {
+              final CloseableStupidPool<ByteBuffer> pool2 = new CloseableStupidPool<>(
+                  "OffheapIncrementalIndex-bufferPool",
+                  () -> ByteBuffer.allocate(256 * 1024)
+              );
+              RESOURCE_CLOSER.register(pool2);
+              return new Builder()
+                  .setIndexSchema(
+                      new IncrementalIndexSchema.Builder()
+                          .withMetrics(factories)
+                          .withRollup(false)
+                          .build()
+                  )
+                  .setMaxRowCount(1000000)
+                  .buildOffheap(pool2);
+            }
+        }
+    );
+
+    params.add(
+        new Object[] {
+            "oak, rollup=false",
             (IndexCreator) factories -> new Builder()
                 .setIndexSchema(
                     new IncrementalIndexSchema.Builder()
@@ -152,7 +188,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
                         .build()
                 )
                 .setMaxRowCount(1000000)
-                .buildOffheap(pool2)
+                .buildOak()
         }
     );
 
@@ -169,6 +205,15 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
       DimensionsSpec dimensionsSpec
   )
   {
+    return createIndex("onheap", aggregatorFactories, dimensionsSpec);
+  }
+
+  public static IncrementalIndex createIndex(
+      String indexImpl,
+      AggregatorFactory[] aggregatorFactories,
+      DimensionsSpec dimensionsSpec
+  )
+  {
     if (null == aggregatorFactories) {
       aggregatorFactories = DEFAULT_AGGREGATOR_FACTORIES;
     }
@@ -181,10 +226,15 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(1000000)
-        .buildOnheap();
+        .build(indexImpl);
   }
 
   public static IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories)
+  {
+    return createIndex("onheap", aggregatorFactories);
+  }
+
+  public static IncrementalIndex createIndex(String indexImpl, AggregatorFactory[] aggregatorFactories)
   {
     if (null == aggregatorFactories) {
       aggregatorFactories = DEFAULT_AGGREGATOR_FACTORIES;
@@ -193,10 +243,15 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     return new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(aggregatorFactories)
         .setMaxRowCount(1000000)
-        .buildOnheap();
+        .build(indexImpl);
   }
 
   public static IncrementalIndex createNoRollupIndex(AggregatorFactory[] aggregatorFactories)
+  {
+    return createNoRollupIndex("onheap", aggregatorFactories);
+  }
+
+  public static IncrementalIndex createNoRollupIndex(String indexImpl, AggregatorFactory[] aggregatorFactories)
   {
     if (null == aggregatorFactories) {
       aggregatorFactories = DEFAULT_AGGREGATOR_FACTORIES;
@@ -205,7 +260,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     return new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(false, aggregatorFactories)
         .setMaxRowCount(1000000)
-        .buildOnheap();
+        .build(indexImpl);
   }
 
   public static void populateIndex(long timestamp, IncrementalIndex index) throws IndexSizeExceededException

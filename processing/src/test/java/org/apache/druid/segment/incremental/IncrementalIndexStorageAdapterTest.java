@@ -22,6 +22,7 @@ package org.apache.druid.segment.incremental;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -74,6 +75,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -94,32 +96,23 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
   private final IndexCreator indexCreator;
 
   public IncrementalIndexStorageAdapterTest(
-      IndexCreator IndexCreator
+      String indexImpl
   )
   {
-    this.indexCreator = IndexCreator;
+    this.indexCreator = () -> new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
+        .setMaxRowCount(1000)
+        .build(indexImpl);
   }
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{index}: {0}")
   public static Collection<?> constructorFeeder()
   {
-    return Arrays.asList(
-        new Object[][]{
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex()
-                  {
-                    return new IncrementalIndex.Builder()
-                        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
-                        .setMaxRowCount(1000)
-                        .buildOnheap();
-                  }
-                }
-            }
-        }
-    );
+    final List<Object[]> constructors = new ArrayList<>();
+    for (final String indexImpl : ImmutableList.of("onheap", "oak")) {
+      constructors.add(new Object[]{indexImpl});
+    }
+    return constructors;
   }
 
   @Test

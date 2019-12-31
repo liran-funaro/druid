@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.IndexableAdapter;
@@ -32,11 +33,16 @@ import org.apache.druid.segment.data.IncrementalIndexTest;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 
+@RunWith(Parameterized.class)
 public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
 {
   private static final IndexSpec INDEX_SPEC = new IndexSpec(
@@ -46,11 +52,28 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
       CompressionFactory.LongEncodingStrategy.LONGS
   );
 
+  private final String indexImpl;
+
+  public IncrementalIndexAdapterTest(String indexImpl)
+  {
+    this.indexImpl = indexImpl;
+  }
+
+  @Parameterized.Parameters(name = "{index}: {0}")
+  public static Collection<?> constructorFeeder()
+  {
+    final List<Object[]> constructors = new ArrayList<>();
+    for (final String indexImpl : ImmutableList.of("onheap", "oak")) {
+      constructors.add(new Object[]{indexImpl});
+    }
+    return constructors;
+  }
+
   @Test
   public void testGetBitmapIndex() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex incrementalIndex = IncrementalIndexTest.createIndex(null);
+    IncrementalIndex incrementalIndex = IncrementalIndexTest.createIndex(indexImpl, null);
     IncrementalIndexTest.populateIndex(timestamp, incrementalIndex);
     IndexableAdapter adapter = new IncrementalIndexAdapter(
         incrementalIndex.getInterval(),
@@ -70,7 +93,7 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
   public void testGetRowsIterable() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(indexImpl, null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final IndexableAdapter incrementalAdapter = new IncrementalIndexAdapter(
@@ -94,18 +117,23 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
   public void testGetRowsIterableNoRollup() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createNoRollupIndex(null);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createNoRollupIndex(indexImpl, null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
 
     ArrayList<Integer> dim1Vals = new ArrayList<>();
+    ArrayList<Integer> dim1Index = new ArrayList<>();
+    // TODO Liran: Verify that keySet() is indeed expected to be unordered
     for (IncrementalIndexRow row : toPersist1.getFacts().keySet()) {
+      dim1Index.add(row.getRowIndex());
       dim1Vals.add(((int[]) row.getDim(0))[0]);
     }
     ArrayList<Integer> dim2Vals = new ArrayList<>();
+    ArrayList<Integer> dim2Index = new ArrayList<>();
     for (IncrementalIndexRow row : toPersist1.getFacts().keySet()) {
+      dim2Index.add(row.getRowIndex());
       dim2Vals.add(((int[]) row.getDim(1))[0]);
     }
 
@@ -156,14 +184,13 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(6, rowStrings.size());
     for (int i = 0; i < 6; i++) {
-      if (i % 2 == 0) {
-        Assert.assertEquals(0, (long) dim1Vals.get(i));
-        Assert.assertEquals(0, (long) dim2Vals.get(i));
-      } else {
-        Assert.assertEquals(1, (long) dim1Vals.get(i));
-        Assert.assertEquals(1, (long) dim2Vals.get(i));
-      }
       Assert.assertEquals(getExpected.apply(i), rowStrings.get(i));
+    }
+
+    List<Integer> expected = Arrays.asList(0, 1, 0, 1, 0, 1);
+    for (int i = 0; i < 6; i++) {
+      Assert.assertEquals(expected.get(dim1Index.get(i)), dim1Vals.get(i));
+      Assert.assertEquals(expected.get(dim2Index.get(i)), dim2Vals.get(i));
     }
   }
 }

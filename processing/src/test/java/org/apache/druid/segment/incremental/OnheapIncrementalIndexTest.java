@@ -34,15 +34,38 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@RunWith(Parameterized.class)
 public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
 {
   private static final int MAX_ROWS = 100000;
+
+  private final String indexImpl;
+
+  public OnheapIncrementalIndexTest(String indexImpl)
+  {
+    this.indexImpl = indexImpl;
+  }
+
+  @Parameterized.Parameters(name = "{index}: {0}")
+  public static Collection<?> constructorFeeder()
+  {
+    final List<Object[]> constructors = new ArrayList<>();
+    for (final String indexImpl : ImmutableList.of("onheap", "oak")) {
+      constructors.add(new Object[]{indexImpl});
+    }
+    return constructors;
+  }
 
   @Test
   public void testMultithreadAddFacts() throws Exception
@@ -55,7 +78,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
-        .buildOnheap();
+        .build(indexImpl);
 
     final int addThreadCount = 2;
     Thread[] addThreads = new Thread[addThreadCount];
@@ -125,7 +148,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
-        .buildOnheap();
+        .build(indexImpl);
 
     final IncrementalIndex indexJs = new IncrementalIndex.Builder()
         .setIndexSchema(
@@ -143,7 +166,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
-        .buildOnheap();
+        .build(indexImpl);
 
     final int addThreadCount = 2;
     Thread[] addThreads = new Thread[addThreadCount];
@@ -172,6 +195,8 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
             }
           }
           catch (Exception e) {
+            // TODO Liran: Why Oak throws different kind of exceptions (but the test pass).
+            // Note: onheap does not throw these exceptions
             throw new RuntimeException(e);
           }
         }
@@ -200,6 +225,9 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
   @Test
   public void testOnHeapIncrementalIndexClose() throws Exception
   {
+    if (!"onheap".equals(indexImpl)) {
+      return;
+    }
     // Prepare the mocks & set close() call count expectation to 1
     Aggregator mockedAggregator = EasyMock.createMock(LongMaxAggregator.class);
     mockedAggregator.close();
@@ -213,7 +241,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
-        .buildOnheap();
+        .build(indexImpl);
 
     index.add(new MapBasedInputRow(
             0,
