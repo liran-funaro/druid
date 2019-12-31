@@ -77,31 +77,34 @@ public final class OakUtils
     return DIMS_INDEX + dimIndex * ALLOC_PER_DIM;
   }
 
+  static final ValueType[] VALUE_ORDINAL_TYPES = ValueType.values();
+
   static Object getDimValue(OakRBuffer buff, int dimIndex)
   {
-    Object dimObject = null;
     int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
     int dimType = buff.getInt(dimIndexInBuffer);
-    if (dimType == NO_DIM) {
-      return null;
-    } else if (dimType == ValueType.DOUBLE.ordinal()) {
-      dimObject = buff.getDouble(dimIndexInBuffer + DATA_OFFSET);
-    } else if (dimType == ValueType.FLOAT.ordinal()) {
-      dimObject = buff.getFloat(dimIndexInBuffer + DATA_OFFSET);
-    } else if (dimType == ValueType.LONG.ordinal()) {
-      dimObject = buff.getLong(dimIndexInBuffer + DATA_OFFSET);
-    } else if (dimType == ValueType.STRING.ordinal()) {
-      int arrayIndexOffset = buff.getInt(dimIndexInBuffer + ARRAY_INDEX_OFFSET);
-      int arrayIndex = arrayIndexOffset;
-      int arraySize = buff.getInt(dimIndexInBuffer + ARRAY_LENGTH_OFFSET);
-      int[] array = new int[arraySize];
-      buff.unsafeCopyBufferToIntArray(arrayIndex, array, arraySize);
-      dimObject = array;
-    }
-    return dimObject;
-  }
 
-  static final ValueType[] VALUE_ORDINAL_TYPES = ValueType.values();
+    if (dimType == NO_DIM || dimType < 0 || dimType >= VALUE_ORDINAL_TYPES.length) {
+      return null;
+    }
+
+    switch (VALUE_ORDINAL_TYPES[dimType]) {
+      case DOUBLE:
+        return buff.getDouble(dimIndexInBuffer + DATA_OFFSET);
+      case FLOAT:
+        return buff.getFloat(dimIndexInBuffer + DATA_OFFSET);
+      case LONG:
+        return buff.getLong(dimIndexInBuffer + DATA_OFFSET);
+      case STRING:
+        int arrayIndexOffset = buff.getInt(dimIndexInBuffer + ARRAY_INDEX_OFFSET);
+        int arraySize = buff.getInt(dimIndexInBuffer + ARRAY_LENGTH_OFFSET);
+        int[] array = new int[arraySize];
+        buff.unsafeCopyBufferToIntArray(arrayIndexOffset, array, arraySize);
+        return array;
+      default:
+        return null;
+    }
+  }
 
   static Object getDimValue(ByteBuffer buff, int dimIndex)
   {
