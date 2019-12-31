@@ -470,8 +470,17 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
             boolean skipMaxRowsInMemoryCheck
     ) throws IndexSizeExceededException
     {
-
-      Consumer<OakWBuffer> computer = buffer -> aggsManager.aggregate(row, rowContainer, buffer.getByteBuffer());
+      Consumer<OakWBuffer> computer = buffer -> {
+        ByteBuffer rawBuffer = buffer.getByteBuffer();
+        // TODO Liran: replace hack by fixing Oak
+        /* Hack: capacity() returns (remaining() - getHeaderSize())
+           ==> remaining() - capacity() = remaining() - remaining() + getHeaderSize() = getHeaderSize() */
+        int initPos = rawBuffer.position();
+        rawBuffer.position(initPos + rawBuffer.remaining() - buffer.capacity());
+        ByteBuffer valueBuf = rawBuffer.slice();
+        rawBuffer.position(initPos);
+        aggsManager.aggregate(row, rowContainer, valueBuf);
+      };
       incrementalIndexRow.setRowIndex(rowIndexGenerator.getAndIncrement());
       boolean added = oak.zc().putIfAbsentComputeIfPresent(incrementalIndexRow, row, computer);
       if (added) {
@@ -482,7 +491,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
       if ((numEntries.get() > maxRowCount) //TODO YONIGO: || sizeInBytes.get() >= maxBytesInMemory
               && !skipMaxRowsInMemoryCheck) {
         throw new IndexSizeExceededException(
-                "Maximum number of rows [%d] or max size in bytes [%d] reached",
+                "Maximum number of rows [%d] reached",
                 maxRowCount
         );
       }
