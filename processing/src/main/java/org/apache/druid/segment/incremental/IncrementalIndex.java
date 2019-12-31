@@ -431,11 +431,18 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     public IncrementalIndex build(String incrementalIndexImpl)
     {
+      return build(incrementalIndexImpl, null);
+    }
+
+    public IncrementalIndex build(String incrementalIndexImpl, final NonBlockingPool<ByteBuffer> bufferPool)
+    {
       switch (incrementalIndexImpl) {
         case "onheap":
           return buildOnheap();
         case "oak":
           return buildOak();
+        case "offheap":
+          return buildOffheap(bufferPool);
         default:
           throw new IllegalArgumentException("Unsupported incremental index: " + incrementalIndexImpl);
       }
