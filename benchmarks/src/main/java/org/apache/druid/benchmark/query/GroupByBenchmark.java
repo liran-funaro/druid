@@ -142,6 +142,9 @@ public class GroupByBenchmark
   @Param({"force", "false"})
   private String vectorize;
 
+  @Param({"onheap", "oak"})
+  private String indexType;
+
   private static final Logger log = new Logger(GroupByBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -556,7 +559,7 @@ public class GroupByBenchmark
         .setReportParseExceptions(false)
         .setConcurrentEventAdd(true)
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build(indexType);
   }
 
   @TearDown(Level.Trial)

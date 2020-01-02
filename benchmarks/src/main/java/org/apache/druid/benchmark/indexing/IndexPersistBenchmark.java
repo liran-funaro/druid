@@ -90,6 +90,9 @@ public class IndexPersistBenchmark
   @Param({"none", "moderate", "high"})
   private String rollupOpportunity;
 
+  @Param({"onheap", "oak"})
+  private String indexType;
+
   private IncrementalIndex incIndex;
   private ArrayList<InputRow> rows;
   private BenchmarkSchemaInfo schemaInfo;
@@ -160,7 +163,7 @@ public class IndexPersistBenchmark
         )
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build(indexType);
   }
 
   @Benchmark

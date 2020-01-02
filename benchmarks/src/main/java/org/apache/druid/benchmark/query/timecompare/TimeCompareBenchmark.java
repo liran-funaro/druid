@@ -116,6 +116,9 @@ public class TimeCompareBenchmark
   @Param({"100"})
   private int threshold;
 
+  @Param({"onheap", "oak"})
+  private String indexType;
+
   protected static final Map<String, String> SCRIPT_DOUBLE_SUM = new HashMap<>();
 
   static {
@@ -411,7 +414,7 @@ public class TimeCompareBenchmark
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build(indexType);
   }
 
   @Benchmark

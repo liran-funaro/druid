@@ -35,6 +35,7 @@ import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OperationsPerInvocation;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -52,6 +53,9 @@ public class IncrementalIndexRowTypeBenchmark
   static {
     NullHandling.initializeForTests();
   }
+
+  @Param({"onheap", "oak"})
+  private String indexType;
 
   private IncrementalIndex incIndex;
   private IncrementalIndex incFloatIndex;
@@ -131,7 +135,7 @@ public class IncrementalIndexRowTypeBenchmark
         .setDeserializeComplexMetrics(false)
         .setReportParseExceptions(false)
         .setMaxRowCount(MAX_ROWS)
-        .buildOnheap();
+        .build(indexType);
   }
 
   @Setup

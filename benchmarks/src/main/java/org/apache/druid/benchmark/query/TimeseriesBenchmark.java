@@ -111,6 +111,9 @@ public class TimeseriesBenchmark
   @Param({"basic.A", "basic.timeFilterNumeric", "basic.timeFilterAlphanumeric", "basic.timeFilterByInterval"})
   private String schemaAndQuery;
 
+  @Param({"onheap", "oak"})
+  private String indexType;
+
   private static final Logger log = new Logger(TimeseriesBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -316,7 +319,7 @@ public class TimeseriesBenchmark
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build(indexType);
   }
 
   private static <T> List<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query)

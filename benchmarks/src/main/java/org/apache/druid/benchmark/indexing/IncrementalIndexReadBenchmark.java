@@ -229,10 +229,15 @@ public class IncrementalIndexReadBenchmark
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(IncrementalIndexReadBenchmark.class.getSimpleName())
+        .include(IncrementalIndexReadBenchmark.class.getSimpleName() + ".read")
+        .warmupIterations(3)
+        .measurementIterations(10)
+        // .measurementTime(TimeValue.NONE)
         .forks(0)
         .threads(1)
         .param("indexType", "oak")
+        .param("rollup", "false")
+        // .param("rowsPerSegment", "2000000")
         .build();
 
     new Runner(opt).run();

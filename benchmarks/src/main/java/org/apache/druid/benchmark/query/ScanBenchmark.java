@@ -120,6 +120,9 @@ public class ScanBenchmark
   @Param({"NONE", "DESCENDING", "ASCENDING"})
   private static ScanQuery.Order ordering;
 
+  @Param({"onheap", "oak"})
+  private String indexType;
+
   private static final Logger log = new Logger(ScanBenchmark.class);
   private static final ObjectMapper JSON_MAPPER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -323,7 +326,7 @@ public class ScanBenchmark
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build(indexType);
   }
 
   private static <T> List<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query)

@@ -111,6 +111,9 @@ public class FilterPartitionBenchmark
   @Param({"basic"})
   private String schema;
 
+  @Param({"onheap", "oak"})
+  private String indexType;
+
   private static final Logger log = new Logger(FilterPartitionBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -231,7 +234,7 @@ public class FilterPartitionBenchmark
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build(indexType);
   }
 
   @Benchmark

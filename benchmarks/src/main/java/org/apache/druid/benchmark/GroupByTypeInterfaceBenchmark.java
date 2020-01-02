@@ -132,6 +132,9 @@ public class GroupByTypeInterfaceBenchmark
   @Param({"all"})
   private String queryGranularity;
 
+  @Param({"onheap", "oak"})
+  private String indexType;
+
   private static final Logger log = new Logger(GroupByTypeInterfaceBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -423,7 +426,7 @@ public class GroupByTypeInterfaceBenchmark
         .setReportParseExceptions(false)
         .setConcurrentEventAdd(true)
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build(indexType);
   }
 
   @TearDown(Level.Trial)

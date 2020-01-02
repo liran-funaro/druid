@@ -112,6 +112,9 @@ public class FilteredAggregatorBenchmark
   @Param({"false", "true"})
   private String vectorize;
 
+  @Param({"onheap", "oak"})
+  private String indexType;
+
   private static final Logger log = new Logger(FilteredAggregatorBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -230,7 +233,7 @@ public class FilteredAggregatorBenchmark
         .setSimpleTestingIndexSchema(metrics)
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build(indexType);
   }
 
   private static <T> List<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query, String vectorize)
