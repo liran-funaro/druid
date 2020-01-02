@@ -142,7 +142,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
 
   private int getDimType(int dimIndex)
   {
-    if (dimIndex >= getDimsLength()) {
+    if (!isDimInBounds(dimIndex)) {
       return OakUtils.NO_DIM;
     }
     int dimIndexInBuffer = OakUtils.getDimIndexInBuffer(dimIndex);
@@ -153,7 +153,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   @Override
   boolean isDimNull(int index)
   {
-    if (index >= getDimsLength()) {
+    if (!isDimInBounds(index)) {
       return true;
     }
     return dimensions.getInt(OakUtils.getDimIndexInBuffer(index)) == OakUtils.NO_DIM;
