@@ -430,8 +430,17 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
                   .entryStreamSet()
                   .iterator();
 
+          OakIncrementalIndexRow[] row = new OakIncrementalIndexRow[]{null};
+
           return Iterators.transform(iterator,
-              entry -> new OakIncrementalIndexRow(entry.getKey(), dimensionDescsList, entry.getValue()));
+              entry -> {
+                if (row[0] == null) {
+                  row[0] = new OakIncrementalIndexRow(entry.getKey(), dimensionDescsList, entry.getValue());
+                } else {
+                  row[0].reset();
+                }
+                return row[0];
+              });
         }
       };
     }

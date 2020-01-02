@@ -43,6 +43,11 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     this.aggregations = aggregations;
   }
 
+  public void reset()
+  {
+    this.dimsLength = -1;
+  }
+
   public OakRBuffer getAggregations()
   {
     return aggregations;
