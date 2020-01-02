@@ -455,9 +455,10 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         int[] indices;
         if (dimIndex < key.getDimsLength()) {
           if (key.avoidDoubleCopyStringDim()) {
-            // TODO Liran: This is unclear. Add better explanation.
-            // incase of oak the key is serialized so its a waste to copy array twice.
-            indexedInts.setValues(key, dimIndex);
+            // Offheap incremental index row might support writing directly to
+            // the ArrayBasedIndexedInts buffer instead of fetching the data
+            // then copy it again.
+            key.copyStringDim(dimIndex, indexedInts);
             return indexedInts;
           }
           indices = (int[]) key.getDim(dimIndex);

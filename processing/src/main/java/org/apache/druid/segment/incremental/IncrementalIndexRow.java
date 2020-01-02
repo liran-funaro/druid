@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.DimensionIndexer;
+import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Array;
@@ -209,17 +210,7 @@ public class IncrementalIndexRow
     return false;
   }
 
-  public int stringDimSize(int dimIndex)
-  {
-    // TODO Liran: Should explain here what is the meaning of "String Dim"
-    if (isDimNull(dimIndex)) {
-      return 0;
-    }
-
-    return ((int[]) dims[dimIndex]).length;
-  }
-
-  public int copyStringDim(int dimIndex, int[] expansion)
+  public void copyStringDim(int dimIndex, ArrayBasedIndexedInts arr)
   {
     // TODO Liran: Should explain here what is the meaning of "String Dim"
     // This function will never be called when avoidDoubleCopyStringDim() returns false

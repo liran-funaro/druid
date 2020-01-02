@@ -21,6 +21,7 @@ package org.apache.druid.segment.incremental;
 
 import com.oath.oak.OakRBuffer;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndex.DimensionDesc;
 
 import javax.annotation.Nullable;
@@ -30,8 +31,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
 {
   private final OakRBuffer dimensions;
   private final OakRBuffer aggregations;
-  @Nullable
-  private Integer dimsLength;
+  private int dimsLength;
 
   public OakIncrementalIndexRow(OakRBuffer dimentions,
                                 List<DimensionDesc> dimensionDescsList,
@@ -39,7 +39,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   {
     super(0, null, dimensionDescsList);
     this.dimensions = dimentions;
-    this.dimsLength = null; // lazy initialization
+    this.dimsLength = -1; // lazy initialization
     this.aggregations = aggregations;
   }
 
@@ -58,7 +58,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   public int getDimsLength()
   {
     // Read length only once
-    if (dimsLength == null) {
+    if (dimsLength < 0) {
       dimsLength = OakUtils.getDimsLength(dimensions);
     }
     return dimsLength;
@@ -119,32 +119,23 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     return true;
   }
 
-  @Override
-  public int stringDimSize(int dimIndex)
-  {
-    if (getDimsLength() == 0 || getDimsLength() <= dimIndex) {
-      return 0;
-    }
-    int dimIndexInBuffer = OakUtils.getDimIndexInBuffer(dimIndex);
-    int arraySize = dimensions.getInt(dimIndexInBuffer + OakUtils.ARRAY_LENGTH_OFFSET);
-    return arraySize;
+  public boolean isDimInBounds(int dimIndex) {
+    return dimIndex >= 0 && dimIndex < getDimsLength();
   }
 
   @Override
-  public int copyStringDim(int dimIndex, int[] expansion)
+  public void copyStringDim(int dimIndex, ArrayBasedIndexedInts arr)
   {
-    if (getDimsLength() == 0 || getDimsLength() <= dimIndex) {
-      return 0;
+    if (!isDimInBounds(dimIndex)) {
+      return;
     }
     int dimIndexInBuffer = OakUtils.getDimIndexInBuffer(dimIndex);
 
-    int arrayIndex = dimensions.getInt(dimIndexInBuffer + OakUtils.ARRAY_INDEX_OFFSET);
     int arraySize = dimensions.getInt(dimIndexInBuffer + OakUtils.ARRAY_LENGTH_OFFSET);
-    if (expansion.length < arraySize) {
-      expansion = new int[arraySize];
-    }
-    dimensions.unsafeCopyBufferToIntArray(arrayIndex, expansion, arraySize);
-    return arraySize;
+    arr.setAndEnsureSize(arraySize);
+
+    int arrayIndex = dimensions.getInt(dimIndexInBuffer + OakUtils.ARRAY_INDEX_OFFSET);
+    dimensions.unsafeCopyBufferToIntArray(arrayIndex, arr.getValues(), arraySize);
   }
 
   /* ---------------- OakRBuffer utils -------------- */
