@@ -452,15 +452,14 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       {
         IncrementalIndexRow key = currEntry.get();
 
-        if (key.avoidDoubleCopyStringDim()) {
-          // TODO Liran: This is unclear. Add better explanation.
-          // incase of oak the key is serialized so its a waste to copy array twice.
-          indexedInts.setValues(key, dimIndex);
-          return indexedInts;
-        }
-
         int[] indices;
         if (dimIndex < key.getDimsLength()) {
+          if (key.avoidDoubleCopyStringDim()) {
+            // TODO Liran: This is unclear. Add better explanation.
+            // incase of oak the key is serialized so its a waste to copy array twice.
+            indexedInts.setValues(key, dimIndex);
+            return indexedInts;
+          }
           indices = (int[]) key.getDim(dimIndex);
         } else {
           indices = null;
