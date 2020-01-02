@@ -24,7 +24,6 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndex.DimensionDesc;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 public class OakIncrementalIndexRow extends IncrementalIndexRow
@@ -124,7 +123,8 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     return true;
   }
 
-  public boolean isDimInBounds(int dimIndex) {
+  public boolean isDimInBounds(int dimIndex)
+  {
     return dimIndex >= 0 && dimIndex < getDimsLength();
   }
 

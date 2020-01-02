@@ -22,7 +22,6 @@ package org.apache.druid.segment.data;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.incremental.IncrementalIndexRow;
 
 /**
  */
