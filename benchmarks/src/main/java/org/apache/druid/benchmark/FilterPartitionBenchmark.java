@@ -111,15 +111,11 @@ public class FilterPartitionBenchmark
   @Param({"basic"})
   private String schema;
 
-  @Param({"onheap", "oak"})
-  private String indexType;
-
   private static final Logger log = new Logger(FilterPartitionBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
-  private IncrementalIndex incIndex;
   private QueryableIndex qIndex;
   private File indexFile;
   private File tmpDir;
@@ -165,7 +161,7 @@ public class FilterPartitionBenchmark
         rowsPerSegment
     );
 
-    incIndex = makeIncIndex();
+    IncrementalIndex incIndex = makeIncIndex();
 
     for (int j = 0; j < rowsPerSegment; j++) {
       InputRow row = gen.nextRow();
@@ -234,7 +230,7 @@ public class FilterPartitionBenchmark
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
-        .build(indexType);
+        .buildOnheap();
   }
 
   @Benchmark
