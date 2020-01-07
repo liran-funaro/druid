@@ -116,9 +116,6 @@ public class TimeCompareBenchmark
   @Param({"100"})
   private int threshold;
 
-  @Param({"onheap", "oak"})
-  private String indexType;
-
   protected static final Map<String, String> SCRIPT_DOUBLE_SUM = new HashMap<>();
 
   static {
@@ -134,7 +131,6 @@ public class TimeCompareBenchmark
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
 
-  private List<IncrementalIndex> incIndexes;
   private List<QueryableIndex> qIndexes;
 
   private QueryRunnerFactory topNFactory;
@@ -310,7 +306,7 @@ public class TimeCompareBenchmark
       startMillis = partialEndMillis;
     }
 
-    incIndexes = new ArrayList<>();
+    List<IncrementalIndex> incIndexes = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
       log.info("Generating rows for segment " + i);
 
@@ -414,7 +410,7 @@ public class TimeCompareBenchmark
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
-        .build(indexType);
+        .buildOnheap();
   }
 
   @Benchmark
