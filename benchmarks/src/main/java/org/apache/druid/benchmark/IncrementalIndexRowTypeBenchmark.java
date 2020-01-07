@@ -54,6 +54,9 @@ public class IncrementalIndexRowTypeBenchmark
     NullHandling.initializeForTests();
   }
 
+  @Param({"250000"})
+  private int rowsPerSegment;
+
   @Param({"onheap", "oak"})
   private String indexType;
 
@@ -62,7 +65,6 @@ public class IncrementalIndexRowTypeBenchmark
   private IncrementalIndex incStrIndex;
   private static AggregatorFactory[] aggs;
   static final int DIMENSION_COUNT = 8;
-  static final int MAX_ROWS = 250000;
 
   private ArrayList<InputRow> longRows = new ArrayList<InputRow>();
   private ArrayList<InputRow> floatRows = new ArrayList<InputRow>();
@@ -134,22 +136,22 @@ public class IncrementalIndexRowTypeBenchmark
         .setSimpleTestingIndexSchema(aggs)
         .setDeserializeComplexMetrics(false)
         .setReportParseExceptions(false)
-        .setMaxRowCount(MAX_ROWS)
+        .setMaxRowCount(rowsPerSegment)
         .build(indexType);
   }
 
   @Setup
   public void setup()
   {
-    for (int i = 0; i < MAX_ROWS; i++) {
+    for (int i = 0; i < rowsPerSegment; i++) {
       longRows.add(getLongRow(0, DIMENSION_COUNT));
     }
 
-    for (int i = 0; i < MAX_ROWS; i++) {
+    for (int i = 0; i < rowsPerSegment; i++) {
       floatRows.add(getFloatRow(0, DIMENSION_COUNT));
     }
 
-    for (int i = 0; i < MAX_ROWS; i++) {
+    for (int i = 0; i < rowsPerSegment; i++) {
       stringRows.add(getStringRow(0, DIMENSION_COUNT));
     }
   }
@@ -165,10 +167,9 @@ public class IncrementalIndexRowTypeBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  @OperationsPerInvocation(MAX_ROWS)
   public void normalLongs(Blackhole blackhole) throws Exception
   {
-    for (int i = 0; i < MAX_ROWS; i++) {
+    for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = longRows.get(i);
       int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);
@@ -178,10 +179,9 @@ public class IncrementalIndexRowTypeBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  @OperationsPerInvocation(MAX_ROWS)
   public void normalFloats(Blackhole blackhole) throws Exception
   {
-    for (int i = 0; i < MAX_ROWS; i++) {
+    for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = floatRows.get(i);
       int rv = incFloatIndex.add(row).getRowCount();
       blackhole.consume(rv);
@@ -191,10 +191,9 @@ public class IncrementalIndexRowTypeBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  @OperationsPerInvocation(MAX_ROWS)
   public void normalStrings(Blackhole blackhole) throws Exception
   {
-    for (int i = 0; i < MAX_ROWS; i++) {
+    for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = stringRows.get(i);
       int rv = incStrIndex.add(row).getRowCount();
       blackhole.consume(rv);
