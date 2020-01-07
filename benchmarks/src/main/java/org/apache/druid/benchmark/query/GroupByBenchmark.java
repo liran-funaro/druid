@@ -139,7 +139,7 @@ public class GroupByBenchmark
   @Param({"all", "day"})
   private String queryGranularity;
 
-  @Param({"force", "false"})
+  @Param({"true", "false"})
   private String vectorize;
 
   @Param({"onheap", "oak"})
