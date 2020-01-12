@@ -362,12 +362,12 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
                           boolean rollup,
                           int maxRowCount)
     {
-      OakMapBuilder<IncrementalIndexRow, Row> builder = new OakMapBuilder<>();
-      builder.setComparator(new OakKeysComparator(dimensionDescsList, rollup))
-              .setKeySerializer(new OakKeySerializer(dimensionDescsList))
-              .setValueSerializer(new OakValueSerializer(aggsManager, in))
-              .setMinKey(getMinIncrementalIndexRow())
-              .setMemoryCapacity(((long) Integer.MAX_VALUE) * 2); // 4GB, to be configured
+      OakMapBuilder<IncrementalIndexRow, Row> builder = new OakMapBuilder<>(
+          new OakKeysComparator(dimensionDescsList, rollup),
+          new OakKeySerializer(dimensionDescsList),
+          new OakValueSerializer(aggsManager, in),
+          getMinIncrementalIndexRow()
+      ).setMemoryCapacity(((long) Integer.MAX_VALUE) * 2); // 4GB, to be configured
       oak = builder.build();
       this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
       this.dimensionDescsList = dimensionDescsList;
