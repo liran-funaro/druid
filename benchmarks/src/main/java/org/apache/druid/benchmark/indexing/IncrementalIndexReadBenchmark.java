@@ -229,7 +229,7 @@ public class IncrementalIndexReadBenchmark
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(IncrementalIndexReadBenchmark.class.getSimpleName() + ".read")
+        .include(IncrementalIndexReadBenchmark.class.getSimpleName() + ".read$")
         .warmupIterations(3)
         .measurementIterations(10)
         // .measurementTime(TimeValue.NONE)

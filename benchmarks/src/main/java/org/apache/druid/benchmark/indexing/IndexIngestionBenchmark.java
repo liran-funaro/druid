@@ -43,6 +43,10 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
@@ -136,5 +140,21 @@ public class IndexIngestionBenchmark
       int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
+  }
+
+  public static void main(String[] args) throws RunnerException
+  {
+    Options opt = new OptionsBuilder()
+        .include(IndexIngestionBenchmark.class.getSimpleName() + ".addRows$")
+        .warmupIterations(3)
+        .measurementIterations(10)
+        .forks(0)
+        .threads(1)
+        .param("indexType", "oak")
+        .param("rollup", "true")
+        .param("rowsPerSegment", "2000000")
+        .build();
+
+    new Runner(opt).run();
   }
 }

@@ -50,6 +50,10 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -172,7 +176,7 @@ public class IndexPersistBenchmark
   public void persistV9(Blackhole blackhole) throws Exception
   {
     File tmpDir = FileUtils.createTempDir();
-    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
+    // log.info("Using temp dir: " + tmpDir.getAbsolutePath());
     try {
       File indexFile = INDEX_MERGER_V9.persist(
           incIndex,
@@ -187,5 +191,23 @@ public class IndexPersistBenchmark
     finally {
       FileUtils.deleteDirectory(tmpDir);
     }
+  }
+
+  public static void main(String[] args) throws RunnerException
+  {
+    Options opt = new OptionsBuilder()
+        .include(IndexPersistBenchmark.class.getSimpleName() + ".persistV9$")
+        .warmupIterations(3)
+        .measurementIterations(10)
+        // .measurementTime(TimeValue.NONE)
+        .forks(0)
+        .threads(1)
+        .param("indexType", "oak")
+        .param("rollup", "true")
+        .param("rollupOpportunity", "high")
+         .param("rowsPerSegment", "1000000")
+        .build();
+
+    new Runner(opt).run();
   }
 }
