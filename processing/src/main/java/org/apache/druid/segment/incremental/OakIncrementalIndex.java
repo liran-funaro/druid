@@ -421,8 +421,15 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
         return null;
       }
       return () -> {
-        IncrementalIndexRow from = new IncrementalIndexRow(timeStart, null, dimensionDescsList, IncrementalIndexRow.EMPTY_ROW_INDEX);
-        IncrementalIndexRow to = new IncrementalIndexRow(timeEnd, null, dimensionDescsList, IncrementalIndexRow.EMPTY_ROW_INDEX);
+        IncrementalIndexRow from = null;
+        IncrementalIndexRow to = null;
+        if (timeStart > getMinTimeMillis()) {
+          from = new IncrementalIndexRow(timeStart, null, dimensionDescsList, IncrementalIndexRow.EMPTY_ROW_INDEX);
+        }
+
+        if (timeEnd < getMaxTimeMillis()) {
+          to = new IncrementalIndexRow(timeEnd, null, dimensionDescsList, IncrementalIndexRow.EMPTY_ROW_INDEX);
+        }
 
         try (OakMap<IncrementalIndexRow, Row> subMap = oak.subMap(from, true, to, false, descending)) {
           Iterator<Map.Entry<OakRBuffer, OakRBuffer>> iterator = subMap
