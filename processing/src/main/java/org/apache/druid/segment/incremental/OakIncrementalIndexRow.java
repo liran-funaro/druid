@@ -134,13 +134,8 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     if (!isDimInBounds(dimIndex)) {
       return;
     }
-    int dimIndexInBuffer = OakUtils.getDimIndexInBuffer(dimIndex);
 
-    int arraySize = dimensions.getInt(dimIndexInBuffer + OakUtils.ARRAY_LENGTH_OFFSET);
-    arr.setAndEnsureSize(arraySize);
-
-    int arrayIndex = dimensions.getInt(dimIndexInBuffer + OakUtils.ARRAY_INDEX_OFFSET);
-    dimensions.unsafeCopyBufferToIntArray(arrayIndex, arr.getValues(), arraySize);
+    OakUtils.copyStringDim(dimensions, dimIndex, arr);
   }
 
   /* ---------------- OakRBuffer utils -------------- */
@@ -150,17 +145,16 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     if (!isDimInBounds(dimIndex)) {
       return OakUtils.NO_DIM;
     }
-    int dimIndexInBuffer = OakUtils.getDimIndexInBuffer(dimIndex);
-    return dimensions.getInt(dimIndexInBuffer + OakUtils.VALUE_TYPE_OFFSET);
+    return OakUtils.getDimType(dimensions, dimIndex);
   }
 
   //Faster to check this way if dim is null instead of deserializing
   @Override
-  boolean isDimNull(int index)
+  boolean isDimNull(int dimIndex)
   {
-    if (!isDimInBounds(index)) {
+    if (!isDimInBounds(dimIndex)) {
       return true;
     }
-    return dimensions.getInt(OakUtils.getDimIndexInBuffer(index)) == OakUtils.NO_DIM;
+    return OakUtils.isDimNull(dimensions, dimIndex);
   }
 }

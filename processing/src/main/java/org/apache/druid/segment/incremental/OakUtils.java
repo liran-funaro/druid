@@ -22,7 +22,10 @@ package org.apache.druid.segment.incremental;
 import com.oath.oak.OakRBuffer;
 import com.oath.oak.UnsafeUtils;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.ArrayBasedIndexedInts;
+
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public final class OakUtils
 {
@@ -79,6 +82,30 @@ public final class OakUtils
 
   static final ValueType[] VALUE_ORDINAL_TYPES = ValueType.values();
 
+  static int getDimType(ByteBuffer buff, int dimIndex)
+  {
+    int dimIndexInBuffer = buff.position() + getDimIndexInBuffer(dimIndex);
+    return buff.getInt(dimIndexInBuffer + OakUtils.VALUE_TYPE_OFFSET);
+  }
+
+  static int getDimType(OakRBuffer buff, int dimIndex)
+  {
+    int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
+    return buff.getInt(dimIndexInBuffer + OakUtils.VALUE_TYPE_OFFSET);
+  }
+
+  static boolean isDimNull(ByteBuffer buff, int dimIndex)
+  {
+    int dimIndexInBuffer = buff.position() + getDimIndexInBuffer(dimIndex);
+    return buff.getInt(dimIndexInBuffer) == OakUtils.NO_DIM;
+  }
+
+  static boolean isDimNull(OakRBuffer buff, int dimIndex)
+  {
+    int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
+    return buff.getInt(dimIndexInBuffer) == OakUtils.NO_DIM;
+  }
+
   static Object getDimValue(OakRBuffer buff, int dimIndex)
   {
     int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
@@ -132,5 +159,28 @@ public final class OakUtils
       default:
         return null;
     }
+  }
+
+  static void copyStringDim(ByteBuffer buff, int dimIndex, ArrayBasedIndexedInts arr)
+  {
+    int dimIndexInBuffer = buff.position() + getDimIndexInBuffer(dimIndex);
+
+    int arraySize = buff.getInt(dimIndexInBuffer + ARRAY_LENGTH_OFFSET);
+    arr.setAndEnsureSize(arraySize);
+
+    int arrayIndexOffset = buff.getInt(dimIndexInBuffer + ARRAY_INDEX_OFFSET);
+    int arrayIndex = buff.position() + arrayIndexOffset;
+    UnsafeUtils.unsafeCopyBufferToIntArray(buff, arrayIndex, arr.getValues(), arraySize);
+  }
+
+  static void copyStringDim(OakRBuffer buff, int dimIndex, ArrayBasedIndexedInts arr)
+  {
+    int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
+
+    int arraySize = buff.getInt(dimIndexInBuffer + OakUtils.ARRAY_LENGTH_OFFSET);
+    arr.setAndEnsureSize(arraySize);
+
+    int arrayIndex = buff.getInt(dimIndexInBuffer + OakUtils.ARRAY_INDEX_OFFSET);
+    buff.unsafeCopyBufferToIntArray(arrayIndex, arr.getValues(), arraySize);
   }
 }

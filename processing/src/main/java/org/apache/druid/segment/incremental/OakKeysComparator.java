@@ -151,9 +151,9 @@ public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
 
     //Faster to check this way if dim is null instead of deserializing
     @Override
-    boolean isDimNull(int index)
+    boolean isDimNull(int dimIndex)
     {
-      return byteBuffer.getInt(OakUtils.getDimIndexInBuffer(index)) == OakUtils.NO_DIM;
+      return OakUtils.isDimNull(byteBuffer, dimIndex);
     }
 
     @Override
