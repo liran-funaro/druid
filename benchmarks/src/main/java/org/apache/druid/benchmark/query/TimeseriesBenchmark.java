@@ -115,6 +115,9 @@ public class TimeseriesBenchmark
   @Param({"basic.A", "basic.timeFilterNumeric", "basic.timeFilterAlphanumeric", "basic.timeFilterByInterval"})
   private String schemaAndQuery;
 
+  @Param({"true", "false"})
+  private boolean descending;
+
   @Param({"onheap", "oak"})
   private String indexType;
 
@@ -178,7 +181,7 @@ public class TimeseriesBenchmark
                 .granularity(Granularities.ALL)
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
-                .descending(false)
+                .descending(descending)
                 .build();
 
       basicQueries.put("A", queryA);
@@ -198,7 +201,7 @@ public class TimeseriesBenchmark
                 .granularity(Granularities.ALL)
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
-                .descending(false)
+                .descending(descending)
                 .build();
 
       basicQueries.put("timeFilterNumeric", timeFilterQuery);
@@ -218,7 +221,7 @@ public class TimeseriesBenchmark
                 .granularity(Granularities.ALL)
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
-                .descending(false)
+                .descending(descending)
                 .build();
 
       basicQueries.put("timeFilterAlphanumeric", timeFilterQuery);
@@ -235,7 +238,7 @@ public class TimeseriesBenchmark
                 .granularity(Granularities.ALL)
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
-                .descending(false)
+                .descending(descending)
                 .build();
 
       basicQueries.put("timeFilterByInterval", timeFilterQuery);
@@ -428,6 +431,7 @@ public class TimeseriesBenchmark
         .forks(0)
         .threads(1)
         .param("indexType", "oak")
+        .param("descending", "false")
         .param("schemaAndQuery", "basic.timeFilterAlphanumeric")
         // .param("rowsPerSegment", "2000000")
         .build();

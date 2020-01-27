@@ -116,6 +116,9 @@ public class FilteredAggregatorBenchmark
   @Param({"false", "true"})
   private String vectorize;
 
+  @Param({"true", "false"})
+  private boolean descending;
+
   @Param({"onheap", "oak"})
   private String indexType;
 
@@ -221,7 +224,7 @@ public class FilteredAggregatorBenchmark
                   .granularity(Granularities.ALL)
                   .intervals(intervalSpec)
                   .aggregators(queryAggs)
-                  .descending(false)
+                  .descending(descending)
                   .build();
   }
 
