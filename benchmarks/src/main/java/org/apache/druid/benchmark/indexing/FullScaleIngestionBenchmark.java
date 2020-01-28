@@ -138,6 +138,8 @@ public class FullScaleIngestionBenchmark
 
     persistTmpDir = FileUtils.createTempDir();
     mergeTmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
+    mergeTmpFile.delete();
+    mergeTmpFile.mkdirs();
     indexesToMerge = new ArrayList<>();
   }
 
