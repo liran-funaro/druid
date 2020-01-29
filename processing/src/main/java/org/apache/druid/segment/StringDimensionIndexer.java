@@ -700,16 +700,28 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     DimensionSelector dimSelectorWithUnsortedValues = (DimensionSelector) selectorWithUnsortedValues;
     class SortedDimensionSelector implements DimensionSelector, IndexedInts
     {
+      @Nullable
+      private IndexedInts row = null;
+
+      private IndexedInts getInnerRow() {
+        if (row != null) {
+          return row;
+        }
+
+        row = dimSelectorWithUnsortedValues.getRow();
+        return row;
+      }
+
       @Override
       public int size()
       {
-        return dimSelectorWithUnsortedValues.getRow().size();
+        return getInnerRow().size();
       }
 
       @Override
       public int get(int index)
       {
-        return sortedLookup().getSortedIdFromUnsortedId(dimSelectorWithUnsortedValues.getRow().get(index));
+        return sortedLookup().getSortedIdFromUnsortedId(getInnerRow().get(index));
       }
 
       @Override

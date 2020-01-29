@@ -350,8 +350,8 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
   @Override
   public void processMergedRow(ColumnValueSelector selector) throws IOException
   {
-    IndexedInts row = getRow(selector);
-    int rowSize = row.size();
+    final IndexedInts row = getRow(selector);
+    final int rowSize = row.size();
     if (rowSize == 0) {
       nullRowsBitmap.add(rowCount);
     } else if (hasNull && isNullRow(row, rowSize)) {
@@ -362,7 +362,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
     if (encodedValueSerializer instanceof ColumnarMultiIntsSerializer) {
       ((ColumnarMultiIntsSerializer) encodedValueSerializer).addValues(row);
     } else {
-      int value = row.size() == 0 ? 0 : row.get(0);
+      int value = rowSize == 0 ? 0 : row.get(0);
       ((SingleValueColumnarIntsSerializer) encodedValueSerializer).addValue(value);
     }
     rowCount++;
