@@ -91,7 +91,7 @@ public class IndexPersistBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"none", "moderate", "high"})
+  @Param({"none", "small", "moderate", "high"})
   private String rollupOpportunity;
 
   @Param({"onheap", "oak"})
@@ -100,6 +100,7 @@ public class IndexPersistBenchmark
   private IncrementalIndex incIndex;
   private ArrayList<InputRow> rows;
   private BenchmarkSchemaInfo schemaInfo;
+  private File tmpDir;
 
   @Setup
   public void setup()
@@ -111,22 +112,11 @@ public class IndexPersistBenchmark
     rows = new ArrayList<InputRow>();
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
 
-    int valuesPerTimestamp = 1;
-    switch (rollupOpportunity) {
-      case "moderate":
-        valuesPerTimestamp = 1000;
-        break;
-      case "high":
-        valuesPerTimestamp = 10000;
-        break;
-
-    }
-
     BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval().getStartMillis(),
-        valuesPerTimestamp,
+        RandomGenerationBenchmark.getValuesPerTimestamp(rollupOpportunity),
         1000.0
     );
 
@@ -139,7 +129,7 @@ public class IndexPersistBenchmark
     }
   }
 
-  @Setup(Level.Iteration)
+  @Setup(Level.Invocation)
   public void setup2() throws IOException
   {
     incIndex = makeIncIndex();
@@ -147,13 +137,17 @@ public class IndexPersistBenchmark
       InputRow row = rows.get(i);
       incIndex.add(row);
     }
+
+    tmpDir = FileUtils.createTempDir();
+    // log.info("Using temp dir: " + tmpDir.getAbsolutePath());
   }
 
-  @TearDown(Level.Iteration)
-  public void teardown()
+  @TearDown(Level.Invocation)
+  public void teardown() throws IOException
   {
     incIndex.close();
     incIndex = null;
+    FileUtils.deleteDirectory(tmpDir);
   }
 
   private IncrementalIndex makeIncIndex()
@@ -175,22 +169,14 @@ public class IndexPersistBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void persistV9(Blackhole blackhole) throws Exception
   {
-    File tmpDir = FileUtils.createTempDir();
-    // log.info("Using temp dir: " + tmpDir.getAbsolutePath());
-    try {
-      File indexFile = INDEX_MERGER_V9.persist(
-          incIndex,
-          tmpDir,
-          new IndexSpec(),
-          null
-      );
+    File indexFile = INDEX_MERGER_V9.persist(
+        incIndex,
+        tmpDir,
+        new IndexSpec(),
+        null
+    );
 
-      blackhole.consume(indexFile);
-
-    }
-    finally {
-      FileUtils.deleteDirectory(tmpDir);
-    }
+    blackhole.consume(indexFile);
   }
 
   public static void main(String[] args) throws RunnerException
@@ -204,7 +190,7 @@ public class IndexPersistBenchmark
         .threads(1)
         .param("indexType", "oak")
         .param("rollup", "true")
-        .param("rollupOpportunity", "high")
+        .param("rollupOpportunity", "none")
          .param("rowsPerSegment", "1000000")
         .build();
 
