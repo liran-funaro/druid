@@ -100,7 +100,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
         DimensionAccessor accessor = accessors.get(dimension.getName());
 
         // Add 'null' to the dimension's dictionary.
-        if (dimIndex >= row.getDimsLength() || row.getDim(dimIndex) == null) {
+        if (row.isDimNull(dimIndex)) {
           accessor.indexer.processRowValsToUnsortedEncodedKeyComponent(null, true);
           continue;
         }
