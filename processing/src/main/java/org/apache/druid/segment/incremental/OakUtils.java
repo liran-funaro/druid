@@ -107,29 +107,7 @@ public final class OakUtils
 
   static Object getDimValue(OakRBuffer buff, int dimIndex)
   {
-    int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
-    int dimType = buff.getInt(dimIndexInBuffer);
-
-    if (dimType == NO_DIM || dimType < 0 || dimType >= VALUE_ORDINAL_TYPES.length) {
-      return null;
-    }
-
-    switch (VALUE_ORDINAL_TYPES[dimType]) {
-      case DOUBLE:
-        return buff.getDouble(dimIndexInBuffer + DATA_OFFSET);
-      case FLOAT:
-        return buff.getFloat(dimIndexInBuffer + DATA_OFFSET);
-      case LONG:
-        return buff.getLong(dimIndexInBuffer + DATA_OFFSET);
-      case STRING:
-        int arrayIndexOffset = buff.getInt(dimIndexInBuffer + ARRAY_INDEX_OFFSET);
-        int arraySize = buff.getInt(dimIndexInBuffer + ARRAY_LENGTH_OFFSET);
-        int[] array = new int[arraySize];
-        buff.unsafeCopyBufferToIntArray(arrayIndexOffset, array, arraySize);
-        return array;
-      default:
-        return null;
-    }
+    return getDimValue(buff.getByteBuffer(), dimIndex);
   }
 
   static Object getDimValue(ByteBuffer buff, int dimIndex)
@@ -174,12 +152,6 @@ public final class OakUtils
 
   static void copyStringDim(OakRBuffer buff, int dimIndex, ArrayBasedIndexedInts arr)
   {
-    int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
-
-    int arraySize = buff.getInt(dimIndexInBuffer + OakUtils.ARRAY_LENGTH_OFFSET);
-    arr.setAndEnsureSize(arraySize);
-
-    int arrayIndex = buff.getInt(dimIndexInBuffer + OakUtils.ARRAY_INDEX_OFFSET);
-    buff.unsafeCopyBufferToIntArray(arrayIndex, arr.getValues(), arraySize);
+    copyStringDim(buff.getByteBuffer(), dimIndex, arr);
   }
 }
