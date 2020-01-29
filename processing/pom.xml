@@ -250,8 +250,8 @@
                     <!-- set default options -->
                     <argLine>
                         @{jacocoArgLine}
-                        -Xmx512m
-                        -XX:MaxDirectMemorySize=2500m
+                        -Xmx3G
+                        -XX:MaxDirectMemorySize=10G
                         -Duser.language=en
                         -Duser.GroupByQueryRunnerTest.javacountry=US
                         -Dfile.encoding=UTF-8

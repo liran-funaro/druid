@@ -462,7 +462,23 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     @Override
     public Iterable<IncrementalIndexRow> persistIterable()
     {
-      return keySet();
+      Iterator<Map.Entry<OakRBuffer, OakRBuffer>> iterator = oak
+          .zc()
+          .entryStreamSet()
+          .iterator();
+
+      OakIncrementalIndexRow[] row = new OakIncrementalIndexRow[]{null};
+
+      return () -> Iterators.transform(iterator,
+          entry -> {
+            if (row[0] == null) {
+              row[0] = new OakIncrementalIndexRow(entry.getKey(), dimensionDescsList, entry.getValue());
+            } else {
+              row[0].reset();
+            }
+            return row[0];
+          });
+      // return keySet();
     }
 
     @Override
@@ -523,61 +539,46 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
     protected float getMetricFloatValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
-      Function<ByteBuffer, Float> transformer = serializedValue -> {
-        BufferAggregator agg = aggsManager.getAggs()[aggIndex];
-        return agg.getFloat(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
-      };
-
+      BufferAggregator agg = aggsManager.getAggs()[aggIndex];
       OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
-      return rBuffer.transform(transformer);
+      ByteBuffer serializedValue = rBuffer.getByteBuffer();
+      return agg.getFloat(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
     }
 
 
     protected long getMetricLongValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
-      Function<ByteBuffer, Long> transformer = serializedValue -> {
-        BufferAggregator agg = aggsManager.getAggs()[aggIndex];
-        return agg.getLong(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
-      };
-
+      BufferAggregator agg = aggsManager.getAggs()[aggIndex];
       OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
-      return rBuffer.transform(transformer);
+      ByteBuffer serializedValue = rBuffer.getByteBuffer();
+      return agg.getLong(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
     }
 
 
     protected Object getMetricObjectValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
-      Function<ByteBuffer, Object> transformer = serializedValue -> {
-        BufferAggregator agg = aggsManager.getAggs()[aggIndex];
-        return agg.get(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
-      };
-
+      BufferAggregator agg = aggsManager.getAggs()[aggIndex];
       OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
-      return rBuffer.transform(transformer);
+      ByteBuffer serializedValue = rBuffer.getByteBuffer();
+      return agg.get(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
     }
 
 
     protected double getMetricDoubleValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
-      Function<ByteBuffer, Double> transformer = serializedValue -> {
-        BufferAggregator agg = aggsManager.getAggs()[aggIndex];
-        return agg.getDouble(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
-      };
-
+      BufferAggregator agg = aggsManager.getAggs()[aggIndex];
       OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
-      return rBuffer.transform(transformer);
+      ByteBuffer serializedValue = rBuffer.getByteBuffer();
+      return agg.getDouble(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
     }
 
 
     protected boolean isNull(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
-      Function<ByteBuffer, Boolean> transformer = serializedValue -> {
-        BufferAggregator agg = aggsManager.getAggs()[aggIndex];
-        return agg.isNull(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
-      };
-
+      BufferAggregator agg = aggsManager.getAggs()[aggIndex];
       OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
-      return rBuffer.transform(transformer);
+      ByteBuffer serializedValue = rBuffer.getByteBuffer();
+      return agg.isNull(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
     }
   }
 }
