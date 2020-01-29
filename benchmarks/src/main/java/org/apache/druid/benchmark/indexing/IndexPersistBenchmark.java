@@ -191,7 +191,7 @@ public class IndexPersistBenchmark
         .param("indexType", "oak")
         .param("rollup", "true")
         .param("rollupOpportunity", "none")
-         .param("rowsPerSegment", "1000000")
+        .param("rowsPerSegment", "1000000")
         .build();
 
     new Runner(opt).run();
