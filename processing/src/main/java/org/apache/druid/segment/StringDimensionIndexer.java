@@ -454,12 +454,10 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
         int[] indices;
         if (dimIndex < key.getDimsLength()) {
-          if (key.avoidDoubleCopyStringDim()) {
-            // Offheap incremental index row might support writing directly to
-            // the ArrayBasedIndexedInts buffer instead of fetching the data
-            // then copy it again.
-            key.copyStringDim(dimIndex, indexedInts);
-            return indexedInts;
+          IndexedInts ret = key.getStringDim(dimIndex);
+          if (ret != null) {
+            // Use if the incremental index row supports lazy indexed int.
+            return ret;
           }
           indices = (int[]) key.getDim(dimIndex);
         } else {
@@ -700,28 +698,16 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     DimensionSelector dimSelectorWithUnsortedValues = (DimensionSelector) selectorWithUnsortedValues;
     class SortedDimensionSelector implements DimensionSelector, IndexedInts
     {
-      @Nullable
-      private IndexedInts row = null;
-
-      private IndexedInts getInnerRow() {
-        if (row != null) {
-          return row;
-        }
-
-        row = dimSelectorWithUnsortedValues.getRow();
-        return row;
-      }
-
       @Override
       public int size()
       {
-        return getInnerRow().size();
+        return dimSelectorWithUnsortedValues.getRow().size();
       }
 
       @Override
       public int get(int index)
       {
-        return sortedLookup().getSortedIdFromUnsortedId(getInnerRow().get(index));
+        return sortedLookup().getSortedIdFromUnsortedId(dimSelectorWithUnsortedValues.getRow().get(index));
       }
 
       @Override
@@ -803,6 +789,27 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     }
 
     for (int dimValIdx : key) {
+      if (bitmapIndexes[dimValIdx] == null) {
+        bitmapIndexes[dimValIdx] = factory.makeEmptyMutableBitmap();
+      }
+      bitmapIndexes[dimValIdx].add(rowNum);
+    }
+  }
+
+  public void fillBitmapsFromUnsortedEncodedKeyComponent(
+      IndexedInts key,
+      int rowNum,
+      MutableBitmap[] bitmapIndexes,
+      BitmapFactory factory
+  )
+  {
+    if (!hasBitmapIndexes) {
+      throw new UnsupportedOperationException("This column does not include bitmap indexes");
+    }
+
+    final int size = key.size();
+    for (int i = 0; i < size; i++) {
+      int dimValIdx = key.get(i);
       if (bitmapIndexes[dimValIdx] == null) {
         bitmapIndexes[dimValIdx] = factory.makeEmptyMutableBitmap();
       }

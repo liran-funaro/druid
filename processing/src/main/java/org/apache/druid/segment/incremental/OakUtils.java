@@ -21,8 +21,9 @@ package org.apache.druid.segment.incremental;
 
 import com.oath.oak.OakRBuffer;
 import com.oath.oak.UnsafeUtils;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.ArrayBasedIndexedInts;
+import org.apache.druid.segment.data.IndexedInts;
 
 import java.nio.ByteBuffer;
 
@@ -138,20 +139,53 @@ public final class OakUtils
     }
   }
 
-  static void copyStringDim(ByteBuffer buff, int dimIndex, ArrayBasedIndexedInts arr)
+  static int getStringDimSize(ByteBuffer buff, int dimIndex)
+  {
+    int dimIndexInBuffer = buff.position() + getDimIndexInBuffer(dimIndex);
+    return buff.getInt(dimIndexInBuffer + ARRAY_LENGTH_OFFSET);
+  }
+
+  static int getStringDimSize(OakRBuffer buff, int dimIndex)
+  {
+    int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
+    return buff.getInt(dimIndexInBuffer + ARRAY_LENGTH_OFFSET);
+  }
+
+  static void copyStringDim(ByteBuffer buff, int dimIndex, int expectedSize, int[] arr)
   {
     int dimIndexInBuffer = buff.position() + getDimIndexInBuffer(dimIndex);
 
-    int arraySize = buff.getInt(dimIndexInBuffer + ARRAY_LENGTH_OFFSET);
-    arr.setAndEnsureSize(arraySize);
-
     int arrayIndexOffset = buff.getInt(dimIndexInBuffer + ARRAY_INDEX_OFFSET);
     int arrayIndex = buff.position() + arrayIndexOffset;
-    UnsafeUtils.unsafeCopyBufferToIntArray(buff, arrayIndex, arr.getValues(), arraySize);
+    UnsafeUtils.unsafeCopyBufferToIntArray(buff, arrayIndex, arr, expectedSize);
   }
 
-  static void copyStringDim(OakRBuffer buff, int dimIndex, ArrayBasedIndexedInts arr)
+  static IndexedInts getStringDim(final ByteBuffer buff, final int dimIndex)
   {
-    copyStringDim(buff.getByteBuffer(), dimIndex, arr);
+    int dimIndexInBuffer = buff.position() + getDimIndexInBuffer(dimIndex);
+    int arraySize = buff.getInt(dimIndexInBuffer + ARRAY_LENGTH_OFFSET);
+    int arrayIndexOffset = buff.getInt(dimIndexInBuffer + ARRAY_INDEX_OFFSET);
+    int arrayIndex = buff.position() + arrayIndexOffset;
+
+    return new IndexedInts()
+    {
+      @Override
+      public int size()
+      {
+        return arraySize;
+      }
+
+      @Override
+      public int get(int index)
+      {
+        return UnsafeUtils.unsafeGetIntFromBuffer(buff, arrayIndex, index);
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // nothing to inspect
+      }
+    };
   }
 }

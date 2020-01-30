@@ -21,30 +21,42 @@ package org.apache.druid.segment.incremental;
 
 import com.oath.oak.OakRBuffer;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.ArrayBasedIndexedInts;
+import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndex.DimensionDesc;
 
+import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.List;
 
 public class OakIncrementalIndexRow extends IncrementalIndexRow
 {
-  private final OakRBuffer dimensions;
+  private final OakRBuffer oakDimensions;
+  private ByteBuffer dimensions;
   private final OakRBuffer aggregations;
   private int dimsLength;
+  @Nullable
+  private IndexedInts stringDim;
+  private int stringDimIndex;
 
   public OakIncrementalIndexRow(OakRBuffer dimentions,
                                 List<DimensionDesc> dimensionDescsList,
                                 OakRBuffer aggregations)
   {
     super(0, null, dimensionDescsList);
-    this.dimensions = dimentions;
+    this.oakDimensions = dimentions;
+    this.dimensions = dimentions.getByteBuffer();
     this.dimsLength = -1; // lazy initialization
     this.aggregations = aggregations;
+    this.stringDim = null;
+    this.stringDimIndex = -1;
   }
 
   public void reset()
   {
     this.dimsLength = -1;
+    this.stringDim = null;
+    this.stringDimIndex = -1;
+    this.dimensions = oakDimensions.getByteBuffer();
   }
 
   public OakRBuffer getAggregations()
@@ -117,25 +129,21 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     return sizeInBytes;
   }
 
-  @Override
-  public boolean avoidDoubleCopyStringDim()
-  {
-    return true;
-  }
-
   public boolean isDimInBounds(int dimIndex)
   {
     return dimIndex >= 0 && dimIndex < getDimsLength();
   }
 
   @Override
-  public void copyStringDim(int dimIndex, ArrayBasedIndexedInts arr)
+  public IndexedInts getStringDim(final int dimIndex)
   {
-    if (!isDimInBounds(dimIndex)) {
-      return;
+    if (stringDim != null && stringDimIndex == dimIndex) {
+      return stringDim;
     }
 
-    OakUtils.copyStringDim(dimensions, dimIndex, arr);
+    stringDim = OakUtils.getStringDim(dimensions, dimIndex);
+    stringDimIndex = dimIndex;
+    return stringDim;
   }
 
   /* ---------------- OakRBuffer utils -------------- */
