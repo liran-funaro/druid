@@ -339,23 +339,24 @@ public class SearchBenchmark
     queryBuilder.limit(limit);
     query = queryBuilder.build();
 
+    BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+        schemaInfo.getColumnSchemas(),
+        System.currentTimeMillis(),
+        schemaInfo.getDataInterval(),
+        rowsPerSegment * numSegments
+    );
+
     incIndexes = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
       log.info("Generating rows for segment " + i);
-      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
-          schemaInfo.getColumnSchemas(),
-          System.currentTimeMillis(),
-          schemaInfo.getDataInterval(),
-          rowsPerSegment
-      );
 
       IncrementalIndex incIndex = makeIncIndex();
 
       for (int j = 0; j < rowsPerSegment; j++) {
         InputRow row = gen.nextRow();
-        if (j % 10000 == 0) {
-          log.info(j + " rows generated.");
-        }
+        // if (j % 10000 == 0) {
+        //   log.info(j + " rows generated.");
+        // }
         incIndex.add(row);
       }
       incIndexes.add(incIndex);
