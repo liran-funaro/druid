@@ -32,7 +32,8 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
 {
   private final OakRBuffer oakDimensions;
   private ByteBuffer dimensions;
-  private final OakRBuffer aggregations;
+  private final OakRBuffer oakAggregations;
+  private ByteBuffer aggregations;
   private int dimsLength;
   @Nullable
   private IndexedInts stringDim;
@@ -44,9 +45,10 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   {
     super(0, null, dimensionDescsList);
     this.oakDimensions = dimentions;
-    this.dimensions = dimentions.getByteBuffer();
+    this.oakAggregations = aggregations;
+    this.dimensions = oakDimensions.getByteBuffer();
+    this.aggregations = null;
     this.dimsLength = -1; // lazy initialization
-    this.aggregations = aggregations;
     this.stringDim = null;
     this.stringDimIndex = -1;
   }
@@ -57,10 +59,14 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     this.stringDim = null;
     this.stringDimIndex = -1;
     this.dimensions = oakDimensions.getByteBuffer();
+    this.aggregations = null;
   }
 
-  public OakRBuffer getAggregations()
+  public ByteBuffer getAggregations()
   {
+    if (aggregations == null) {
+      aggregations = oakAggregations.getByteBuffer();
+    }
     return aggregations;
   }
 

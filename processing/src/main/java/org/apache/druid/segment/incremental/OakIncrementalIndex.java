@@ -540,8 +540,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     protected float getMetricFloatValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
       BufferAggregator agg = aggsManager.getAggs()[aggIndex];
-      OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
-      ByteBuffer serializedValue = rBuffer.getByteBuffer();
+      ByteBuffer serializedValue = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
       return agg.getFloat(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
     }
 
@@ -549,8 +548,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     protected long getMetricLongValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
       BufferAggregator agg = aggsManager.getAggs()[aggIndex];
-      OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
-      ByteBuffer serializedValue = rBuffer.getByteBuffer();
+      ByteBuffer serializedValue = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
       return agg.getLong(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
     }
 
@@ -558,8 +556,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     protected Object getMetricObjectValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
       BufferAggregator agg = aggsManager.getAggs()[aggIndex];
-      OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
-      ByteBuffer serializedValue = rBuffer.getByteBuffer();
+      ByteBuffer serializedValue = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
       return agg.get(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
     }
 
@@ -567,8 +564,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     protected double getMetricDoubleValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
       BufferAggregator agg = aggsManager.getAggs()[aggIndex];
-      OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
-      ByteBuffer serializedValue = rBuffer.getByteBuffer();
+      ByteBuffer serializedValue = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
       return agg.getDouble(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
     }
 
@@ -576,8 +572,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     protected boolean isNull(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
       BufferAggregator agg = aggsManager.getAggs()[aggIndex];
-      OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
-      ByteBuffer serializedValue = rBuffer.getByteBuffer();
+      ByteBuffer serializedValue = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
       return agg.isNull(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
     }
   }
