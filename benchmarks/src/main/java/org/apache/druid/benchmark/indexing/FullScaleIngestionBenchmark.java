@@ -146,8 +146,10 @@ public class FullScaleIngestionBenchmark
   @TearDown(Level.Invocation)
   public void tearDown() throws IOException
   {
-    incIndex.close();
-    incIndex = null;
+    if (incIndex != null) {
+      incIndex.close();
+      incIndex = null;
+    }
     FileUtils.deleteDirectory(persistTmpDir);
     mergeTmpFile.delete();
   }
@@ -171,7 +173,9 @@ public class FullScaleIngestionBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void addPersistMerge(Blackhole blackhole) throws Exception
   {
-    addRowsAndPersist(blackhole);
+    addPersist(blackhole);
+    incIndex.close();
+    incIndex = null;
 
     List<QueryableIndex> qIndexesToMerge = new ArrayList<>();
     for (File f : indexesToMerge) {
@@ -194,7 +198,7 @@ public class FullScaleIngestionBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void addRowsAndPersist(Blackhole blackhole) throws Exception
+  public void addPersist(Blackhole blackhole) throws Exception
   {
     for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = gen.nextRow();
@@ -214,7 +218,7 @@ public class FullScaleIngestionBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void addRows(Blackhole blackhole) throws Exception
+  public void add(Blackhole blackhole) throws Exception
   {
     for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = gen.nextRow();
@@ -244,16 +248,16 @@ public class FullScaleIngestionBenchmark
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(FullScaleIngestionBenchmark.class.getSimpleName() + ".addRows$")
+        .include(FullScaleIngestionBenchmark.class.getSimpleName() + ".addPersistMerge$")
         .warmupIterations(3)
         .measurementIterations(10)
         .forks(0)
         .threads(1)
         .param("indexType", "oak")
-        .param("rollup", "true")
-        .param("rollupOpportunity", "moderate")
-        .param("maxRowsBeforePersist", "2000000")
-        .param("rowsPerSegment", "2000000")
+        .param("rollup", "false")
+        .param("rollupOpportunity", "none")
+        .param("maxRowsBeforePersist", "1000000")
+        .param("rowsPerSegment", "20000000")
         // .param("rowsPerSegment", "1000000")
         .build();
 
