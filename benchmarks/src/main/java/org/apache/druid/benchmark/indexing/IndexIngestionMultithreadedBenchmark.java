@@ -162,11 +162,12 @@ public class IndexIngestionMultithreadedBenchmark
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(IndexIngestionMultithreadedBenchmark.class.getSimpleName())
+        .include(IndexIngestionMultithreadedBenchmark.class.getSimpleName() + ".add$")
         .forks(1)
         .threads(4)
         .param("indexType", "oak")
         .param("rollup", "false")
+        .param("rowsPerSegment", "1000000")
         .build();
 
     new Runner(opt).run();

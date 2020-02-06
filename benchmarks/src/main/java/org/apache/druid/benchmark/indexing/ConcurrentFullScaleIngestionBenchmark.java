@@ -66,12 +66,12 @@ import java.util.concurrent.TimeUnit;
 @Fork(value = 1)
 @Warmup(iterations = 10)
 @Measurement(iterations = 25)
-public class FullScaleIngestionBenchmark
+public class ConcurrentFullScaleIngestionBenchmark
 {
-  @Param({"2000000"})
+  @Param({"20000000"})
   private int rowsPerSegment;
 
-  @Param({"100000", "500000", "1000000", "1500000", "2000000"})
+  @Param({"1000000"})
   private int maxRowsBeforePersist;
 
   @Param({"basic"})
@@ -86,10 +86,8 @@ public class FullScaleIngestionBenchmark
   @Param({"onheap", "oak"})
   private String indexType;
 
-  // @Param({"/Users/lfunaro/workspace-data/flurry/flurry-data-1561000000000-4.csv"})
-  // private String fakeDataPath;
 
-  private static final Logger log = new Logger(FullScaleIngestionBenchmark.class);
+  private static final Logger log = new Logger(ConcurrentFullScaleIngestionBenchmark.class);
   public static final ObjectMapper JSON_MAPPER;
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -105,54 +103,59 @@ public class FullScaleIngestionBenchmark
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
-  private IncrementalIndex incIndex;
   private BenchmarkSchemaInfo schemaInfo;
-  private BenchmarkDataGenerator gen;
-  private File persistTmpDir;
-  private File mergeTmpFile;
-  private List<File> indexesToMerge;
-  // RandomAccessFile fakeFile;
 
   @Setup
   public void setup() throws IOException
   {
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
-
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
-
-    // fakeFile = new RandomAccessFile(fakeDataPath, "r");
   }
 
-  @Setup(Level.Invocation)
-  public void setup2() throws IOException
+  @State(Scope.Thread)
+  public static class ThreadState
   {
-    incIndex = null;
+    IncrementalIndex incIndex;
 
-    gen = new BenchmarkDataGenerator(
-        schemaInfo.getColumnSchemas(),
-        RNG_SEED,
-        schemaInfo.getDataInterval().getStartMillis(),
-        RandomGenerationBenchmark.getValuesPerTimestamp(rollupOpportunity),
-        1000.0
-    );
 
-    persistTmpDir = FileUtils.createTempDir();
-    mergeTmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
-    mergeTmpFile.delete();
-    mergeTmpFile.mkdirs();
-    indexesToMerge = new ArrayList<>();
-  }
+    BenchmarkDataGenerator gen;
+    File persistTmpDir;
+    File mergeTmpFile;
+    List<File> indexesToMerge;
 
-  @TearDown(Level.Invocation)
-  public void tearDown() throws IOException
-  {
-    if (incIndex != null) {
-      incIndex.close();
+    @Setup(Level.Invocation)
+    public void setup2(ConcurrentFullScaleIngestionBenchmark globalState) throws IOException
+    {
       incIndex = null;
+
+      gen = new BenchmarkDataGenerator(
+          globalState.schemaInfo.getColumnSchemas(),
+          RNG_SEED,
+          globalState.schemaInfo.getDataInterval().getStartMillis(),
+          RandomGenerationBenchmark.getValuesPerTimestamp(globalState.rollupOpportunity),
+          1000.0
+      );
+
+      persistTmpDir = FileUtils.createTempDir();
+      mergeTmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
+      mergeTmpFile.delete();
+      mergeTmpFile.mkdirs();
+      indexesToMerge = new ArrayList<>();
     }
-    FileUtils.deleteDirectory(persistTmpDir);
-    mergeTmpFile.delete();
+
+    @TearDown(Level.Invocation)
+    public void tearDown() throws IOException
+    {
+      if (incIndex != null) {
+        incIndex.close();
+        incIndex = null;
+      }
+      FileUtils.deleteDirectory(persistTmpDir);
+      mergeTmpFile.delete();
+    }
   }
+
+
 
   private IncrementalIndex makeIncIndex()
   {
@@ -171,14 +174,14 @@ public class FullScaleIngestionBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void addPersistMerge(Blackhole blackhole) throws Exception
+  public void addPersistMerge(Blackhole blackhole, ThreadState threadState) throws Exception
   {
-    addPersist(blackhole);
-    incIndex.close();
-    incIndex = null;
+    addPersist(blackhole, threadState);
+    threadState.incIndex.close();
+    threadState.incIndex = null;
 
     List<QueryableIndex> qIndexesToMerge = new ArrayList<>();
-    for (File f : indexesToMerge) {
+    for (File f : threadState.indexesToMerge) {
       QueryableIndex qIndex = INDEX_IO.loadIndex(f);
       qIndexesToMerge.add(qIndex);
     }
@@ -187,7 +190,7 @@ public class FullScaleIngestionBenchmark
         qIndexesToMerge,
         rollup,
         schemaInfo.getAggsArray(),
-        mergeTmpFile,
+        threadState.mergeTmpFile,
         new IndexSpec(),
         null
     );
@@ -198,51 +201,51 @@ public class FullScaleIngestionBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void addPersist(Blackhole blackhole) throws Exception
+  public void addPersist(Blackhole blackhole, ThreadState threadState) throws Exception
   {
-    incIndex = makeIncIndex();
+    threadState.incIndex = makeIncIndex();
     for (int i = 0; i < rowsPerSegment; i++) {
-      InputRow row = gen.nextRow();
-      int rv = incIndex.add(row).getRowCount();
+      InputRow row = threadState.gen.nextRow();
+      int rv = threadState.incIndex.add(row).getRowCount();
       blackhole.consume(rv);
 
-      if (incIndex.size() >= maxRowsBeforePersist || i == rowsPerSegment - 1) {
-        persistV9(blackhole);
-        incIndex.close();
-        incIndex = makeIncIndex();
+      if (threadState.incIndex.size() >= maxRowsBeforePersist || i == rowsPerSegment - 1) {
+        persistV9(blackhole, threadState);
+        threadState.incIndex.close();
+        threadState.incIndex = makeIncIndex();
       }
     }
 
-    blackhole.consume(indexesToMerge);
+    blackhole.consume(threadState.indexesToMerge);
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void add(Blackhole blackhole) throws Exception
+  public void add(Blackhole blackhole, ThreadState threadState) throws Exception
   {
-    incIndex = makeIncIndex();
+    threadState.incIndex = makeIncIndex();
     for (int i = 0; i < rowsPerSegment; i++) {
-      InputRow row = gen.nextRow();
-      int rv = incIndex.add(row).getRowCount();
+      InputRow row = threadState.gen.nextRow();
+      int rv = threadState.incIndex.add(row).getRowCount();
       blackhole.consume(rv);
 
-      if (incIndex.size() >= maxRowsBeforePersist || i == rowsPerSegment - 1) {
-        incIndex.close();
-        incIndex = makeIncIndex();
+      if (threadState.incIndex.size() >= maxRowsBeforePersist || i == rowsPerSegment - 1) {
+        threadState.incIndex.close();
+        threadState.incIndex = makeIncIndex();
       }
     }
   }
 
-  public void persistV9(Blackhole blackhole) throws Exception
+  public void persistV9(Blackhole blackhole, ThreadState threadState) throws Exception
   {
     File indexFile = INDEX_MERGER_V9.persist(
-        incIndex,
-        persistTmpDir,
+        threadState.incIndex,
+        threadState.persistTmpDir,
         new IndexSpec(),
         null
     );
-    indexesToMerge.add(indexFile);
+    threadState.indexesToMerge.add(indexFile);
 
     blackhole.consume(indexFile);
   }
@@ -250,16 +253,16 @@ public class FullScaleIngestionBenchmark
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(FullScaleIngestionBenchmark.class.getSimpleName() + ".addPersistMerge$")
+        .include(ConcurrentFullScaleIngestionBenchmark.class.getSimpleName() + ".add$")
         .warmupIterations(3)
         .measurementIterations(10)
         .forks(0)
-        .threads(1)
-        .param("indexType", "oak")
+        .threads(4)
+        .param("indexType", "onheap")
         .param("rollup", "false")
         .param("rollupOpportunity", "none")
         .param("maxRowsBeforePersist", "1000000")
-        .param("rowsPerSegment", "20000000")
+        .param("rowsPerSegment", "1000000")
         // .param("rowsPerSegment", "1000000")
         .build();
 

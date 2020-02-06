@@ -145,7 +145,7 @@ public class IndexIngestionBenchmark
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(IndexIngestionBenchmark.class.getSimpleName() + ".addRows$")
+        .include(IndexIngestionBenchmark.class.getSimpleName() + ".add$")
         .warmupIterations(3)
         .measurementIterations(10)
         .forks(0)
