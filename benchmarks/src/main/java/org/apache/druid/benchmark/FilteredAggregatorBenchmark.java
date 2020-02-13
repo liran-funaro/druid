@@ -25,6 +25,7 @@ import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
+import org.apache.druid.benchmark.query.TimeseriesBenchmark;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -68,6 +69,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
@@ -127,17 +129,13 @@ public class FilteredAggregatorBenchmark
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
-  private IncrementalIndex incIndex;
-  private IncrementalIndex incIndexFilteredAgg;
+
   private AggregatorFactory[] filteredMetrics;
-  private QueryableIndex qIndex;
   private File indexFile;
   private DimFilter filter;
-  private List<InputRow> inputRows;
   private QueryRunnerFactory factory;
   private BenchmarkSchemaInfo schemaInfo;
   private TimeseriesQuery query;
-  private File tmpDir;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -171,8 +169,6 @@ public class FilteredAggregatorBenchmark
         rowsPerSegment
     );
 
-    incIndex = makeIncIndex(schemaInfo.getAggsArray());
-
     filter = new OrDimFilter(
         Arrays.asList(
             new BoundDimFilter("dimSequential", "-1", "-1", true, true, null, null, StringComparators.ALPHANUMERIC),
@@ -183,28 +179,6 @@ public class FilteredAggregatorBenchmark
     );
     filteredMetrics = new AggregatorFactory[1];
     filteredMetrics[0] = new FilteredAggregatorFactory(new CountAggregatorFactory("rows"), filter);
-    incIndexFilteredAgg = makeIncIndex(filteredMetrics);
-
-    inputRows = new ArrayList<>();
-    for (int j = 0; j < rowsPerSegment; j++) {
-      InputRow row = gen.nextRow();
-      if (j % 10000 == 0) {
-        log.info(j + " rows generated.");
-      }
-      incIndex.add(row);
-      inputRows.add(row);
-    }
-
-    tmpDir = FileUtils.createTempDir();
-    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
-
-    indexFile = INDEX_MERGER_V9.persist(
-        incIndex,
-        tmpDir,
-        new IndexSpec(),
-        null
-    );
-    qIndex = INDEX_IO.loadIndex(indexFile);
 
     factory = new TimeseriesQueryRunnerFactory(
         new TimeseriesQueryQueryToolChest(
@@ -228,10 +202,112 @@ public class FilteredAggregatorBenchmark
                   .build();
   }
 
-  @TearDown
-  public void tearDown() throws IOException
-  {
-    FileUtils.deleteDirectory(tmpDir);
+  @State(Scope.Benchmark)
+  public static class IncrementalIndexState {
+    IncrementalIndex incIndex;
+
+    @Setup
+    public void setup(FilteredAggregatorBenchmark global) throws IndexSizeExceededException
+    {
+      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+          global.schemaInfo.getColumnSchemas(),
+          RNG_SEED,
+          global.schemaInfo.getDataInterval(),
+          global.rowsPerSegment
+      );
+
+      incIndex = global.makeIncIndex(global.schemaInfo.getAggsArray());
+
+      for (int j = 0; j < global.rowsPerSegment; j++) {
+        InputRow row = gen.nextRow();
+        // if (j % 10000 == 0) {
+        //   log.info(j + " rows generated.");
+        // }
+        incIndex.add(row);
+      }
+    }
+
+    @TearDown
+    public void tearDown()
+    {
+      incIndex.close();
+    }
+  }
+
+  @State(Scope.Benchmark)
+  public static class FilteredIncrementalIndexState {
+    IncrementalIndex incIndex;
+    private List<InputRow> inputRows;
+
+    @Setup
+    public void setup(FilteredAggregatorBenchmark global) throws IndexSizeExceededException
+    {
+      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+          global.schemaInfo.getColumnSchemas(),
+          RNG_SEED,
+          global.schemaInfo.getDataInterval(),
+          global.rowsPerSegment
+      );
+
+      incIndex = global.makeIncIndex(global.filteredMetrics);
+
+      for (int j = 0; j < global.rowsPerSegment; j++) {
+        InputRow row = gen.nextRow();
+        // if (j % 10000 == 0) {
+        //   log.info(j + " rows generated.");
+        // }
+        inputRows.add(row);
+      }
+    }
+
+    @TearDown
+    public void tearDown()
+    {
+      incIndex.close();
+    }
+  }
+
+  @State(Scope.Benchmark)
+  public static class QueryableIndexState {
+    private File qIndexFile;
+    private QueryableIndex qIndex;
+
+    @Setup
+    public void setup(FilteredAggregatorBenchmark global) throws IOException
+    {
+      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+          global.schemaInfo.getColumnSchemas(),
+          RNG_SEED,
+          global.schemaInfo.getDataInterval(),
+          global.rowsPerSegment
+      );
+
+      IncrementalIndex incIndex = global.makeIncIndex(global.schemaInfo.getAggsArray());
+
+      for (int j = 0; j < global.rowsPerSegment; j++) {
+        InputRow row = gen.nextRow();
+        // if (j % 10000 == 0) {
+        //   log.info(j + " rows generated.");
+        // }
+        incIndex.add(row);
+      }
+
+      qIndexFile = INDEX_MERGER_V9.persist(
+          incIndex,
+          FileUtils.createTempDir(),
+          new IndexSpec(),
+          null
+      );
+      incIndex.close();
+
+      qIndex = INDEX_IO.loadIndex(qIndexFile);
+    }
+
+    @TearDown
+    public void tearDown()
+    {
+      qIndexFile.delete();
+    }
   }
 
   private IncrementalIndex makeIncIndex(AggregatorFactory[] metrics)
@@ -261,11 +337,10 @@ public class FilteredAggregatorBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void ingest(Blackhole blackhole) throws Exception
+  public void ingest(Blackhole blackhole, FilteredIncrementalIndexState state) throws Exception
   {
-    incIndexFilteredAgg = makeIncIndex(filteredMetrics);
-    for (InputRow row : inputRows) {
-      int rv = incIndexFilteredAgg.add(row).getRowCount();
+    for (InputRow row : state.inputRows) {
+      int rv = state.incIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }
@@ -273,12 +348,12 @@ public class FilteredAggregatorBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleIncrementalIndex(Blackhole blackhole)
+  public void querySingleIncrementalIndex(Blackhole blackhole, IncrementalIndexState state)
   {
     QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("incIndex"),
-        new IncrementalIndexSegment(incIndex, SegmentId.dummy("incIndex"))
+        new IncrementalIndexSegment(state.incIndex, SegmentId.dummy("incIndex"))
     );
 
     List<Result<TimeseriesResultValue>> results = FilteredAggregatorBenchmark.runQuery(
@@ -295,12 +370,12 @@ public class FilteredAggregatorBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndex(Blackhole blackhole)
+  public void querySingleQueryableIndex(Blackhole blackhole, QueryableIndexState state)
   {
     final QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("qIndex"),
-        new QueryableIndexSegment(qIndex, SegmentId.dummy("qIndex"))
+        new QueryableIndexSegment(state.qIndex, SegmentId.dummy("qIndex"))
     );
 
     List<Result<TimeseriesResultValue>> results = FilteredAggregatorBenchmark.runQuery(

@@ -131,6 +131,7 @@ public class TimeCompareBenchmark
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
 
+  private File qIndexesDir;
   private List<QueryableIndex> qIndexes;
 
   private QueryRunnerFactory topNFactory;
@@ -143,7 +144,6 @@ public class TimeCompareBenchmark
   private QueryRunner timeseriesRunner;
 
   private BenchmarkSchemaInfo schemaInfo;
-  private File tmpDir;
   private Interval[] segmentIntervals;
 
   private ExecutorService executorService;
@@ -306,7 +306,9 @@ public class TimeCompareBenchmark
       startMillis = partialEndMillis;
     }
 
-    List<IncrementalIndex> incIndexes = new ArrayList<>();
+    qIndexesDir = FileUtils.createTempDir();
+    qIndexes = new ArrayList<>();
+
     for (int i = 0; i < numSegments; i++) {
       log.info("Generating rows for segment " + i);
 
@@ -321,22 +323,15 @@ public class TimeCompareBenchmark
 
       for (int j = 0; j < rowsPerSegment; j++) {
         InputRow row = gen.nextRow();
-        if (j % 10000 == 0) {
-          log.info(j + " rows generated.");
-        }
+        // if (j % 10000 == 0) {
+        //   log.info(j + " rows generated.");
+        // }
         incIndex.add(row);
       }
-      incIndexes.add(incIndex);
-    }
 
-    tmpDir = FileUtils.createTempDir();
-    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
-
-    qIndexes = new ArrayList<>();
-    for (int i = 0; i < numSegments; i++) {
       File indexFile = INDEX_MERGER_V9.persist(
-          incIndexes.get(i),
-          tmpDir,
+          incIndex,
+          new File(qIndexesDir, String.valueOf(i)),
           new IndexSpec(),
           null
       );
@@ -399,9 +394,9 @@ public class TimeCompareBenchmark
   }
 
   @TearDown
-  public void tearDown() throws IOException
+  public void tearDown()
   {
-    FileUtils.deleteDirectory(tmpDir);
+    qIndexesDir.delete();
   }
 
   private IncrementalIndex makeIncIndex()

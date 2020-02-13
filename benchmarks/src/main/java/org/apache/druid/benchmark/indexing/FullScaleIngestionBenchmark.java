@@ -27,7 +27,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -86,10 +85,6 @@ public class FullScaleIngestionBenchmark
   @Param({"onheap", "oak"})
   private String indexType;
 
-  // @Param({"/Users/lfunaro/workspace-data/flurry/flurry-data-1561000000000-4.csv"})
-  // private String fakeDataPath;
-
-  private static final Logger log = new Logger(FullScaleIngestionBenchmark.class);
   public static final ObjectMapper JSON_MAPPER;
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -108,10 +103,8 @@ public class FullScaleIngestionBenchmark
   private IncrementalIndex incIndex;
   private BenchmarkSchemaInfo schemaInfo;
   private BenchmarkDataGenerator gen;
-  private File persistTmpDir;
-  private File mergeTmpFile;
   private List<File> indexesToMerge;
-  // RandomAccessFile fakeFile;
+  private File mergeTmpFile;
 
   @Setup
   public void setup() throws IOException
@@ -119,12 +112,10 @@ public class FullScaleIngestionBenchmark
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
-
-    // fakeFile = new RandomAccessFile(fakeDataPath, "r");
   }
 
   @Setup(Level.Invocation)
-  public void setup2() throws IOException
+  public void setup2()
   {
     incIndex = null;
 
@@ -136,10 +127,7 @@ public class FullScaleIngestionBenchmark
         1000.0
     );
 
-    persistTmpDir = FileUtils.createTempDir();
-    mergeTmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
-    mergeTmpFile.delete();
-    mergeTmpFile.mkdirs();
+    mergeTmpFile = null;
     indexesToMerge = new ArrayList<>();
   }
 
@@ -150,8 +138,14 @@ public class FullScaleIngestionBenchmark
       incIndex.close();
       incIndex = null;
     }
-    FileUtils.deleteDirectory(persistTmpDir);
-    mergeTmpFile.delete();
+
+    for (File f : indexesToMerge) {
+      FileUtils.deleteDirectory(f);
+    }
+
+    if (mergeTmpFile != null) {
+      mergeTmpFile.delete();
+    }
   }
 
   private IncrementalIndex makeIncIndex()
@@ -182,6 +176,10 @@ public class FullScaleIngestionBenchmark
       QueryableIndex qIndex = INDEX_IO.loadIndex(f);
       qIndexesToMerge.add(qIndex);
     }
+
+    mergeTmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
+    mergeTmpFile.delete();
+    mergeTmpFile.mkdirs();
 
     File mergedFile = INDEX_MERGER_V9.mergeQueryableIndex(
         qIndexesToMerge,
@@ -236,21 +234,21 @@ public class FullScaleIngestionBenchmark
 
   public void persistV9(Blackhole blackhole) throws Exception
   {
-    File indexFile = INDEX_MERGER_V9.persist(
+    File indexFile = FileUtils.createTempDir();
+    indexesToMerge.add(indexFile);
+    indexFile = INDEX_MERGER_V9.persist(
         incIndex,
-        persistTmpDir,
+        indexFile,
         new IndexSpec(),
         null
     );
-    indexesToMerge.add(indexFile);
-
     blackhole.consume(indexFile);
   }
 
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(FullScaleIngestionBenchmark.class.getSimpleName() + ".addPersistMerge$")
+        .include(FullScaleIngestionBenchmark.class.getSimpleName() + ".add$")
         .warmupIterations(3)
         .measurementIterations(10)
         .forks(0)
@@ -259,7 +257,7 @@ public class FullScaleIngestionBenchmark
         .param("rollup", "false")
         .param("rollupOpportunity", "none")
         .param("maxRowsBeforePersist", "1000000")
-        .param("rowsPerSegment", "20000000")
+        .param("rowsPerSegment", "1000000")
         // .param("rowsPerSegment", "1000000")
         .build();
 

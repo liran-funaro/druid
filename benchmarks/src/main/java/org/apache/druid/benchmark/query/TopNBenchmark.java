@@ -66,6 +66,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
@@ -128,14 +129,10 @@ public class TopNBenchmark
     NullHandling.initializeForTests();
   }
 
-  private List<IncrementalIndex> incIndexes;
-  private List<QueryableIndex> qIndexes;
-
   private QueryRunnerFactory factory;
   private BenchmarkSchemaInfo schemaInfo;
   private TopNQueryBuilder queryBuilder;
   private TopNQuery query;
-  private File tmpDir;
 
   private ExecutorService executorService;
 
@@ -240,45 +237,6 @@ public class TopNBenchmark
     queryBuilder.threshold(threshold);
     query = queryBuilder.build();
 
-    incIndexes = new ArrayList<>();
-    for (int i = 0; i < numSegments; i++) {
-      log.info("Generating rows for segment " + i);
-
-      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
-          schemaInfo.getColumnSchemas(),
-          RNG_SEED + i,
-          schemaInfo.getDataInterval(),
-          rowsPerSegment
-      );
-
-      IncrementalIndex incIndex = makeIncIndex();
-
-      for (int j = 0; j < rowsPerSegment; j++) {
-        InputRow row = gen.nextRow();
-        if (j % 10000 == 0) {
-          log.info(j + " rows generated.");
-        }
-        incIndex.add(row);
-      }
-      incIndexes.add(incIndex);
-    }
-
-    tmpDir = FileUtils.createTempDir();
-    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
-
-    qIndexes = new ArrayList<>();
-    for (int i = 0; i < numSegments; i++) {
-      File indexFile = INDEX_MERGER_V9.persist(
-          incIndexes.get(i),
-          tmpDir,
-          new IndexSpec(),
-          null
-      );
-
-      QueryableIndex qIndex = INDEX_IO.loadIndex(indexFile);
-      qIndexes.add(qIndex);
-    }
-
     factory = new TopNQueryRunnerFactory(
         new StupidPool<>(
             "TopNBenchmark-compute-bufferPool",
@@ -294,11 +252,87 @@ public class TopNBenchmark
     );
   }
 
-  @TearDown
-  public void tearDown() throws IOException
-  {
-    FileUtils.deleteDirectory(tmpDir);
-    incIndexes.forEach(index -> index.close());
+  @State(Scope.Benchmark)
+  public static class IncrementalIndexState {
+    IncrementalIndex incIndex;
+
+    @Setup
+    public void setup(TopNBenchmark global) throws IndexSizeExceededException
+    {
+      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+          global.schemaInfo.getColumnSchemas(),
+          RNG_SEED,
+          global.schemaInfo.getDataInterval(),
+          global.rowsPerSegment
+      );
+
+      incIndex = global.makeIncIndex();
+
+      for (int j = 0; j < global.rowsPerSegment; j++) {
+        InputRow row = gen.nextRow();
+        // if (j % 10000 == 0) {
+        //   log.info(j + " rows generated.");
+        // }
+        incIndex.add(row);
+      }
+    }
+
+    @TearDown
+    public void tearDown()
+    {
+      incIndex.close();
+    }
+  }
+
+  @State(Scope.Benchmark)
+  public static class QueryableIndexState {
+    private File qIndexesDir;
+    private List<QueryableIndex> qIndexes;
+
+    @Setup
+    public void setup(TopNBenchmark global) throws IOException
+    {
+      qIndexesDir = FileUtils.createTempDir();
+      qIndexes = new ArrayList<>();
+
+      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+          global.schemaInfo.getColumnSchemas(),
+          RNG_SEED,
+          global.schemaInfo.getDataInterval(),
+          global.rowsPerSegment
+      );
+
+      for (int i = 0; i < global.numSegments; i++) {
+        log.info("Generating rows for segment " + i);
+
+        IncrementalIndex incIndex = global.makeIncIndex();
+
+        for (int j = 0; j < global.rowsPerSegment; j++) {
+          InputRow row = gen.nextRow();
+          // if (j % 10000 == 0) {
+          //   log.info(j + " rows generated.");
+          // }
+          incIndex.add(row);
+        }
+
+        File indexFile = INDEX_MERGER_V9.persist(
+            incIndex,
+            new File(qIndexesDir, String.valueOf(i)),
+            new IndexSpec(),
+            null
+        );
+        incIndex.close();
+
+        QueryableIndex qIndex = INDEX_IO.loadIndex(indexFile);
+        qIndexes.add(qIndex);
+      }
+    }
+
+    @TearDown
+    public void tearDown()
+    {
+      qIndexesDir.delete();
+    }
   }
 
   private IncrementalIndex makeIncIndex()
@@ -326,12 +360,12 @@ public class TopNBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleIncrementalIndex(Blackhole blackhole)
+  public void querySingleIncrementalIndex(Blackhole blackhole, IncrementalIndexState state)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("incIndex"),
-        new IncrementalIndexSegment(incIndexes.get(0), SegmentId.dummy("incIndex"))
+        new IncrementalIndexSegment(state.incIndex, SegmentId.dummy("incIndex"))
     );
 
     List<Result<TopNResultValue>> results = TopNBenchmark.runQuery(factory, runner, query);
@@ -341,12 +375,12 @@ public class TopNBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndex(Blackhole blackhole)
+  public void querySingleQueryableIndex(Blackhole blackhole, QueryableIndexState state)
   {
     final QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("qIndex"),
-        new QueryableIndexSegment(qIndexes.get(0), SegmentId.dummy("qIndex"))
+        new QueryableIndexSegment(state.qIndexes.get(0), SegmentId.dummy("qIndex"))
     );
 
     List<Result<TopNResultValue>> results = TopNBenchmark.runQuery(factory, runner, query);
@@ -356,7 +390,7 @@ public class TopNBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndex(Blackhole blackhole)
+  public void queryMultiQueryableIndex(Blackhole blackhole, QueryableIndexState state)
   {
     List<QueryRunner<Result<TopNResultValue>>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = factory.getToolchest();
@@ -365,7 +399,7 @@ public class TopNBenchmark
       QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
           segmentId,
-          new QueryableIndexSegment(qIndexes.get(i), segmentId)
+          new QueryableIndexSegment(state.qIndexes.get(i), segmentId)
       );
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }
@@ -388,14 +422,15 @@ public class TopNBenchmark
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(TopNBenchmark.class.getSimpleName() + ".querySingleIncrementalIndex$")
-        .warmupIterations(3)
-        .measurementIterations(10)
+        .include(TopNBenchmark.class.getSimpleName()) // + ".querySingleIncrementalIndex$"
+        .warmupIterations(1)
+        .measurementIterations(2)
         .forks(0)
         .threads(1)
         .param("indexType", "onheap")
         .param("schemaAndQuery", "basic.A")
-        // .param("rowsPerSegment", "2000000")
+        .param("rowsPerSegment", "5000")
+        .param("numSegments", "3")
         .build();
 
     new Runner(opt).run();

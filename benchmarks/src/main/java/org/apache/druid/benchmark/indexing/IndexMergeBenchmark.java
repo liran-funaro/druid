@@ -58,6 +58,7 @@ import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
+import sun.misc.VM;
 
 import java.io.File;
 import java.io.IOException;
@@ -95,9 +96,8 @@ public class IndexMergeBenchmark
     NullHandling.initializeForTests();
   }
 
-  private List<File> indexesToMerge;
   private BenchmarkSchemaInfo schemaInfo;
-  private File tmpDir;
+  private List<File> indexesToMerge;
   private File mergeTmpFile;
 
   static {
@@ -148,19 +148,12 @@ public class IndexMergeBenchmark
         incIndex.add(row);
       }
 
-      log.info("Index " + i + " generated.");
-
-      tmpDir = FileUtils.createTempDir();
-      log.info("Using temp dir: " + tmpDir.getAbsolutePath());
-
       File indexFile = INDEX_MERGER_V9.persist(
           incIndex,
-          tmpDir,
+          FileUtils.createTempDir(),
           new IndexSpec(),
           null
       );
-
-      log.info("Index " + i + " flushed.");
 
       indexesToMerge.add(indexFile);
     }
@@ -176,9 +169,11 @@ public class IndexMergeBenchmark
   }
 
   @TearDown
-  public void tearDown() throws IOException
+  public void tearDown()
   {
-    FileUtils.deleteDirectory(tmpDir);
+    for (File f : indexesToMerge) {
+      f.delete();
+    }
   }
 
   static long folderSize(File fileOrDir)
@@ -249,7 +244,7 @@ public class IndexMergeBenchmark
       log.info("Name: %s: %s", mpBean.getName(), mpBean.getUsage());
     }
 
-    log.info("Max direct memory: %s", sun.misc.VM.maxDirectMemory());
+    log.info("Max direct memory: %s", VM.maxDirectMemory());
 
     Options opt = new OptionsBuilder()
         .include(IndexMergeBenchmark.class.getSimpleName() + ".mergeV9$")

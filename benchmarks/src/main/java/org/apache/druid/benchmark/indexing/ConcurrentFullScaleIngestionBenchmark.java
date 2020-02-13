@@ -27,7 +27,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -86,21 +85,10 @@ public class ConcurrentFullScaleIngestionBenchmark
   @Param({"onheap", "oak"})
   private String indexType;
 
-
-  private static final Logger log = new Logger(ConcurrentFullScaleIngestionBenchmark.class);
-  public static final ObjectMapper JSON_MAPPER;
   private static final int RNG_SEED = 9999;
-  private static final IndexMergerV9 INDEX_MERGER_V9;
-  private static final IndexIO INDEX_IO;
 
   static {
     NullHandling.initializeForTests();
-    JSON_MAPPER = new DefaultObjectMapper();
-    INDEX_IO = new IndexIO(
-        JSON_MAPPER,
-        () -> 0
-    );
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
   private BenchmarkSchemaInfo schemaInfo;
@@ -117,14 +105,27 @@ public class ConcurrentFullScaleIngestionBenchmark
   {
     IncrementalIndex incIndex;
 
+    ObjectMapper jsonMapper;
+    IndexIO indexIO;
+    IndexMergerV9 indexMergerV9;
 
     BenchmarkDataGenerator gen;
-    File persistTmpDir;
     File mergeTmpFile;
     List<File> indexesToMerge;
 
+    @Setup
+    public void setup()
+    {
+      jsonMapper = new DefaultObjectMapper();
+      indexIO = new IndexIO(
+          jsonMapper,
+          () -> 0
+      );
+      indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
+    }
+
     @Setup(Level.Invocation)
-    public void setup2(ConcurrentFullScaleIngestionBenchmark globalState) throws IOException
+    public void setup2(ConcurrentFullScaleIngestionBenchmark globalState)
     {
       incIndex = null;
 
@@ -136,10 +137,7 @@ public class ConcurrentFullScaleIngestionBenchmark
           1000.0
       );
 
-      persistTmpDir = FileUtils.createTempDir();
-      mergeTmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
-      mergeTmpFile.delete();
-      mergeTmpFile.mkdirs();
+      mergeTmpFile = null;
       indexesToMerge = new ArrayList<>();
     }
 
@@ -150,12 +148,16 @@ public class ConcurrentFullScaleIngestionBenchmark
         incIndex.close();
         incIndex = null;
       }
-      FileUtils.deleteDirectory(persistTmpDir);
-      mergeTmpFile.delete();
+
+      for (File f : indexesToMerge) {
+        FileUtils.deleteDirectory(f);
+      }
+
+      if (mergeTmpFile != null) {
+        mergeTmpFile.delete();
+      }
     }
   }
-
-
 
   private IncrementalIndex makeIncIndex()
   {
@@ -177,16 +179,19 @@ public class ConcurrentFullScaleIngestionBenchmark
   public void addPersistMerge(Blackhole blackhole, ThreadState threadState) throws Exception
   {
     addPersist(blackhole, threadState);
-    threadState.incIndex.close();
     threadState.incIndex = null;
+
+    threadState.mergeTmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
+    threadState.mergeTmpFile.delete();
+    threadState.mergeTmpFile.mkdirs();
 
     List<QueryableIndex> qIndexesToMerge = new ArrayList<>();
     for (File f : threadState.indexesToMerge) {
-      QueryableIndex qIndex = INDEX_IO.loadIndex(f);
+      QueryableIndex qIndex = threadState.indexIO.loadIndex(f);
       qIndexesToMerge.add(qIndex);
     }
 
-    File mergedFile = INDEX_MERGER_V9.mergeQueryableIndex(
+    File mergedFile = threadState.indexMergerV9.mergeQueryableIndex(
         qIndexesToMerge,
         rollup,
         schemaInfo.getAggsArray(),
@@ -204,6 +209,7 @@ public class ConcurrentFullScaleIngestionBenchmark
   public void addPersist(Blackhole blackhole, ThreadState threadState) throws Exception
   {
     threadState.incIndex = makeIncIndex();
+
     for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = threadState.gen.nextRow();
       int rv = threadState.incIndex.add(row).getRowCount();
@@ -212,7 +218,9 @@ public class ConcurrentFullScaleIngestionBenchmark
       if (threadState.incIndex.size() >= maxRowsBeforePersist || i == rowsPerSegment - 1) {
         persistV9(blackhole, threadState);
         threadState.incIndex.close();
-        threadState.incIndex = makeIncIndex();
+        if (i != rowsPerSegment - 1) {
+          threadState.incIndex = makeIncIndex();
+        }
       }
     }
 
@@ -232,21 +240,23 @@ public class ConcurrentFullScaleIngestionBenchmark
 
       if (threadState.incIndex.size() >= maxRowsBeforePersist || i == rowsPerSegment - 1) {
         threadState.incIndex.close();
-        threadState.incIndex = makeIncIndex();
+        if (i != rowsPerSegment - 1) {
+          threadState.incIndex = makeIncIndex();
+        }
       }
     }
   }
 
   public void persistV9(Blackhole blackhole, ThreadState threadState) throws Exception
   {
-    File indexFile = INDEX_MERGER_V9.persist(
+    File indexFile = FileUtils.createTempDir();
+    threadState.indexesToMerge.add(indexFile);
+    indexFile = threadState.indexMergerV9.persist(
         threadState.incIndex,
-        threadState.persistTmpDir,
+        indexFile,
         new IndexSpec(),
         null
     );
-    threadState.indexesToMerge.add(indexFile);
-
     blackhole.consume(indexFile);
   }
 
