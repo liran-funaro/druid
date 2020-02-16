@@ -133,33 +133,29 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
   @Override
   public int calculateSize(IncrementalIndexRow incrementalIndexRow)
   {
-    //TODO - YONIGO befrore this was == null is it correct now?
-    if (incrementalIndexRow.getDimsLength() == 0) {
-      return Long.BYTES + 2 * Integer.BYTES;
-    }
+    // The ByteBuffer will contain:
+    // 1. long:        the timeStamp
+    // 2. int:         dims.length
+    // 3. int:         rowIndex (used for Plain mode only)
+    // 4. multi-value: the serialization of each dim
+    // 5. int array:   the array (for dims with capabilities of a String ValueType)
+    int dimsLength = incrementalIndexRow.getDimsLength();
+    int allocSize = Long.BYTES + (2 * Integer.BYTES) + (OakUtils.ALLOC_PER_DIM * dimsLength);
 
     // When the dimensionDesc's capabilities are of type ValueType.STRING,
     // the object in timeAndDims.dims is of type int[].
     // In this case, we need to know the array size before allocating the ByteBuffer.
-    int sumOfArrayLengths = 0;
-    for (int i = 0; i < incrementalIndexRow.getDimsLength(); i++) {
-      Object dim = incrementalIndexRow.getDim(i);
-      if (dim == null) {
+    for (int i = 0; i < dimsLength; i++) {
+      if (getDimValueType(i, dimensionDescsList) != ValueType.STRING) {
         continue;
       }
-      if (getDimValueType(i, dimensionDescsList) == ValueType.STRING) {
-        sumOfArrayLengths += ((int[]) dim).length;
+
+      Object dim = incrementalIndexRow.getDim(i);
+      if (dim != null) {
+        allocSize += Integer.BYTES * ((int[]) dim).length;
       }
     }
 
-    // The ByteBuffer will contain:
-    // 1. the timeStamp
-    // 2. dims.length
-    // 3. rowIndex (used for Plain mode only)
-    // 4. the serialization of each dim
-    // 5. the array (for dims with capabilities of a String ValueType)
-    int dimCapacity = OakUtils.ALLOC_PER_DIM;
-    int allocSize = Long.BYTES + 2 * Integer.BYTES + dimCapacity * incrementalIndexRow.getDimsLength() + Integer.BYTES * sumOfArrayLengths;
     return allocSize;
   }
 }
