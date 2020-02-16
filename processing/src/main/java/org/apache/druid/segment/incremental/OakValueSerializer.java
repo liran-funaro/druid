@@ -42,7 +42,6 @@ public class OakValueSerializer implements OakSerializer<Row>
   @Override
   public void serialize(Row row, ByteBuffer byteBuffer)
   {
-    //TODO YONIGO - why cast?
     aggsManager.initValue(byteBuffer, (InputRow) row, rowContainer);
   }
 
