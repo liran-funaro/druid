@@ -25,10 +25,8 @@ import org.apache.druid.data.input.Row;
 
 import java.nio.ByteBuffer;
 
-
 public class OakValueSerializer implements OakSerializer<Row>
 {
-
   private final OakIncrementalIndex.AggsManager aggsManager;
   private final ThreadLocal<InputRow> rowContainer;
 
@@ -50,7 +48,6 @@ public class OakValueSerializer implements OakSerializer<Row>
   {
     // cannot be deserialized without the IncrementalIndexRow
     throw new UnsupportedOperationException();
-
   }
 
   @Override
