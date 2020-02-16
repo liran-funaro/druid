@@ -273,7 +273,8 @@ public class TimeseriesBenchmark
   }
 
   @State(Scope.Benchmark)
-  public static class IncrementalIndexState {
+  public static class IncrementalIndexState
+  {
     IncrementalIndex incIndex;
 
     @Setup
@@ -305,7 +306,8 @@ public class TimeseriesBenchmark
   }
 
   @State(Scope.Benchmark)
-  public static class QueryableIndexState {
+  public static class QueryableIndexState
+  {
     private File qIndexesDir;
     private List<QueryableIndex> qIndexes;
 

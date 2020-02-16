@@ -494,7 +494,8 @@ public class GroupByBenchmark
 
 
   @State(Scope.Benchmark)
-  public static class IncrementalIndexState {
+  public static class IncrementalIndexState
+  {
     IncrementalIndex incIndex;
 
     @Setup(Level.Trial)
@@ -526,7 +527,8 @@ public class GroupByBenchmark
   }
 
   @State(Scope.Benchmark)
-  public static class QueryableIndexState {
+  public static class QueryableIndexState
+  {
     private File qIndexesDir;
     private List<QueryableIndex> qIndexes;
 

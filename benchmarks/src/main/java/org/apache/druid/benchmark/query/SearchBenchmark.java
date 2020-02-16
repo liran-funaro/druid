@@ -337,13 +337,6 @@ public class SearchBenchmark
     queryBuilder.limit(limit);
     query = queryBuilder.build();
 
-    BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
-        schemaInfo.getColumnSchemas(),
-        System.currentTimeMillis(),
-        schemaInfo.getDataInterval(),
-        rowsPerSegment * numSegments
-    );
-
     final SearchQueryConfig config = new SearchQueryConfig().withOverrides(query);
     factory = new SearchQueryRunnerFactory(
         new SearchStrategySelector(Suppliers.ofInstance(config)),
@@ -356,7 +349,8 @@ public class SearchBenchmark
   }
 
   @State(Scope.Benchmark)
-  public static class IncrementalIndexState {
+  public static class IncrementalIndexState
+  {
     IncrementalIndex incIndex;
 
     @Setup
@@ -388,7 +382,8 @@ public class SearchBenchmark
   }
 
   @State(Scope.Benchmark)
-  public static class QueryableIndexState {
+  public static class QueryableIndexState
+  {
     private File qIndexesDir;
     private List<QueryableIndex> qIndexes;
 

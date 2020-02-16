@@ -25,7 +25,6 @@ import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
-import org.apache.druid.benchmark.query.TimeseriesBenchmark;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -162,13 +161,6 @@ public class FilteredAggregatorBenchmark
 
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
 
-    BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
-        schemaInfo.getColumnSchemas(),
-        RNG_SEED,
-        schemaInfo.getDataInterval(),
-        rowsPerSegment
-    );
-
     filter = new OrDimFilter(
         Arrays.asList(
             new BoundDimFilter("dimSequential", "-1", "-1", true, true, null, null, StringComparators.ALPHANUMERIC),
@@ -203,7 +195,8 @@ public class FilteredAggregatorBenchmark
   }
 
   @State(Scope.Benchmark)
-  public static class IncrementalIndexState {
+  public static class IncrementalIndexState
+  {
     IncrementalIndex incIndex;
 
     @Setup
@@ -235,7 +228,8 @@ public class FilteredAggregatorBenchmark
   }
 
   @State(Scope.Benchmark)
-  public static class FilteredIncrementalIndexState {
+  public static class FilteredIncrementalIndexState
+  {
     IncrementalIndex incIndex;
     private List<InputRow> inputRows;
 
@@ -268,7 +262,8 @@ public class FilteredAggregatorBenchmark
   }
 
   @State(Scope.Benchmark)
-  public static class QueryableIndexState {
+  public static class QueryableIndexState
+  {
     private File qIndexFile;
     private QueryableIndex qIndex;
 
