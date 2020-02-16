@@ -30,7 +30,6 @@ import java.util.List;
 
 public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
 {
-
   private final List<IncrementalIndex.DimensionDesc> dimensionDescsList;
   private final boolean rollup;
 
