@@ -43,6 +43,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
@@ -73,6 +74,7 @@ public class TaskToolboxFactory
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
   private final ExecutorService queryExecutorService;
+  private final JoinableFactory joinableFactory;
   private final MonitorScheduler monitorScheduler;
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final ObjectMapper jsonMapper;
@@ -104,6 +106,7 @@ public class TaskToolboxFactory
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
       @Processing ExecutorService queryExecutorService,
+      JoinableFactory joinableFactory,
       MonitorScheduler monitorScheduler,
       SegmentLoaderFactory segmentLoaderFactory,
       @Json ObjectMapper jsonMapper,
@@ -134,6 +137,7 @@ public class TaskToolboxFactory
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
     this.queryExecutorService = queryExecutorService;
+    this.joinableFactory = joinableFactory;
     this.monitorScheduler = monitorScheduler;
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.jsonMapper = jsonMapper;
@@ -168,6 +172,7 @@ public class TaskToolboxFactory
         handoffNotifierFactory,
         queryRunnerFactoryConglomerateProvider,
         queryExecutorService,
+        joinableFactory,
         monitorScheduler,
         segmentLoaderFactory.manufacturate(taskWorkDir),
         jsonMapper,

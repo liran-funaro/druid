@@ -121,7 +121,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   }
 
   @Override
-  public Segment getSegment(DataSegment segment) throws SegmentLoadingException
+  public Segment getSegment(DataSegment segment, boolean lazy) throws SegmentLoadingException
   {
     final ReferenceCountingLock lock = createOrGetLock(segment);
     final File segmentFiles;
@@ -147,7 +147,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
       factory = new MMappedQueryableSegmentizerFactory(indexIO);
     }
 
-    return factory.factorize(segment, segmentFiles);
+    return factory.factorize(segment, segmentFiles, lazy);
   }
 
   @Override
@@ -263,7 +263,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         StorageLocation loc = findStorageLocationIfLoaded(segment);
 
         if (loc == null) {
-          log.warn("Asked to cleanup something[%s] that didn't exist.  Skipping.", segment);
+          log.warn("Asked to cleanup something[%s] that didn't exist.  Skipping.", segment.getId());
           return;
         }
 

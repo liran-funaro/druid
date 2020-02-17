@@ -34,6 +34,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.SegmentPublisher;
@@ -42,6 +43,7 @@ import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import java.util.concurrent.ExecutorService;
 
 /**
+ *
  */
 public class RealtimePlumberSchool implements PlumberSchool
 {
@@ -52,6 +54,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final SegmentPublisher segmentPublisher;
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   private final ExecutorService queryExecutorService;
+  private final JoinableFactory joinableFactory;
   private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
   private final Cache cache;
@@ -69,6 +72,7 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject SegmentPublisher segmentPublisher,
       @JacksonInject SegmentHandoffNotifierFactory handoffNotifierFactory,
       @JacksonInject @Processing ExecutorService executorService,
+      @JacksonInject JoinableFactory joinableFactory,
       @JacksonInject IndexMergerV9 indexMergerV9,
       @JacksonInject IndexIO indexIO,
       @JacksonInject Cache cache,
@@ -85,6 +89,7 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.segmentPublisher = segmentPublisher;
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryExecutorService = executorService;
+    this.joinableFactory = joinableFactory;
     this.indexMergerV9 = Preconditions.checkNotNull(indexMergerV9, "Null IndexMergerV9");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
 
@@ -112,6 +117,7 @@ public class RealtimePlumberSchool implements PlumberSchool
         conglomerate,
         segmentAnnouncer,
         queryExecutorService,
+        joinableFactory,
         dataSegmentPusher,
         segmentPublisher,
         handoffNotifierFactory.createSegmentHandoffNotifier(schema.getDataSource()),

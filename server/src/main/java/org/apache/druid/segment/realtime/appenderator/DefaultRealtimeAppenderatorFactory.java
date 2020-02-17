@@ -33,6 +33,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
@@ -47,6 +48,7 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ExecutorService queryExecutorService;
+  private final JoinableFactory joinableFactory;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper jsonMapper;
   private final IndexIO indexIO;
@@ -61,6 +63,7 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
       @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
       @JacksonInject @Processing ExecutorService queryExecutorService,
+      @JacksonInject JoinableFactory joinableFactory,
       @JacksonInject DataSegmentPusher dataSegmentPusher,
       @JacksonInject @Json ObjectMapper jsonMapper,
       @JacksonInject IndexIO indexIO,
@@ -75,6 +78,7 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
     this.conglomerate = conglomerate;
     this.segmentAnnouncer = segmentAnnouncer;
     this.queryExecutorService = queryExecutorService;
+    this.joinableFactory = joinableFactory;
     this.dataSegmentPusher = dataSegmentPusher;
     this.jsonMapper = jsonMapper;
     this.indexIO = indexIO;
@@ -111,6 +115,7 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
         segmentAnnouncer,
         emitter,
         queryExecutorService,
+        joinableFactory,
         cache,
         cacheConfig,
         cachePopulatorStats,

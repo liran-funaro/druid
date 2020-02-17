@@ -107,7 +107,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       @Override
       public boolean isNull()
       {
-        return currEntry.get().getDim(dimIndex) == null;
+        return currEntry.get().isDimNull(dimIndex);
       }
 
       @Override
@@ -131,7 +131,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
         final Object dim = currEntry.get().getDim(dimIndex);
 
         if (dim == null) {
-          return null;
+          return NullHandling.defaultLongValue();
         }
 
         return (Long) dim;

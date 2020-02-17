@@ -199,7 +199,7 @@ public class IncrementalIndexRow
     return hash;
   }
 
-  boolean isDimNull(int index)
+  public boolean isDimNull(int index)
   {
     return (dims == null) || (index >= dims.length) || (dims[index] == null);
   }

@@ -140,6 +140,16 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     return dimIndex >= 0 && dimIndex < getDimsLength();
   }
 
+  //Faster to check this way if dim is null instead of deserializing
+  @Override
+  public boolean isDimNull(int dimIndex)
+  {
+    if (!isDimInBounds(dimIndex)) {
+      return true;
+    }
+    return OakUtils.isDimNull(dimensions, dimIndex);
+  }
+
   @Override
   public IndexedInts getStringDim(final int dimIndex)
   {
@@ -160,15 +170,5 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
       return OakUtils.NO_DIM;
     }
     return OakUtils.getDimType(dimensions, dimIndex);
-  }
-
-  //Faster to check this way if dim is null instead of deserializing
-  @Override
-  boolean isDimNull(int dimIndex)
-  {
-    if (!isDimInBounds(dimIndex)) {
-      return true;
-    }
-    return OakUtils.isDimNull(dimensions, dimIndex);
   }
 }
