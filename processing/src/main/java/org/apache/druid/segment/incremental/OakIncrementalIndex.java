@@ -213,13 +213,13 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
   {
     //TODO YONIGO - rewrite this function. maybe return an unserialized row?
     Function<Map.Entry<OakRBuffer, OakRBuffer>, Row> transformer = entry -> {
-      OakRBuffer serializedKey = entry.getKey();
-      OakRBuffer serializedValue = entry.getValue();
-      long timeStamp = OakUtils.getTimestamp(serializedKey);
-      int dimsLength = OakUtils.getDimsLength(serializedKey);
+      ByteBuffer serializedKey = entry.getKey().getByteBuffer();
+      ByteBuffer serializedValue = entry.getValue().getByteBuffer();
+      long timeStamp = OakKey.getTimestamp(serializedKey);
+      int dimsLength = OakKey.getDimsLength(serializedKey);
       Map<String, Object> theVals = Maps.newLinkedHashMap();
       for (int i = 0; i < dimsLength; ++i) {
-        Object dim = OakUtils.getDimValue(serializedKey, i);
+        Object dim = OakKey.getDimValue(serializedKey, i);
         DimensionDesc dimensionDesc = dimensionDescsList.get(i);
         if (dimensionDesc == null) {
           continue;
@@ -239,7 +239,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
       for (int i = 0; i < aggs.length; ++i) {
         BufferAggregator agg = aggs[i];
         int aggOffsetInBuffer = aggsManager.aggOffsetInBuffer[i];
-        Object theVal = serializedValue.transform(bb -> agg.get(bb, aggOffsetInBuffer));
+        Object theVal = agg.get(serializedValue, aggOffsetInBuffer);
         theVals.put(aggsManager.metrics[i].getName(), theVal);
       }
 

@@ -58,21 +58,21 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
 
     // calculating buffer indexes for writing the key data
     int buffIndex = byteBuffer.position();  // the first byte for writing the key
-    int timeStampIndex = buffIndex + OakUtils.TIME_STAMP_INDEX;    // the timestamp index
-    int dimsLengthIndex = buffIndex + OakUtils.DIMS_LENGTH_INDEX;  // the dims array length index
-    int rowIndexIndex = buffIndex + OakUtils.ROW_INDEX_INDEX;      // the rowIndex index
-    int dimsIndex = buffIndex + OakUtils.DIMS_INDEX;               // the dims array index
-    int dimCapacity = OakUtils.ALLOC_PER_DIM;                      // the number of bytes required
+    int timeStampIndex = buffIndex + OakKey.TIME_STAMP_INDEX;    // the timestamp index
+    int dimsLengthIndex = buffIndex + OakKey.DIMS_LENGTH_INDEX;  // the dims array length index
+    int rowIndexIndex = buffIndex + OakKey.ROW_INDEX_INDEX;      // the rowIndex index
+    int dimsIndex = buffIndex + OakKey.DIMS_INDEX;               // the dims array index
+    int dimCapacity = OakKey.ALLOC_PER_DIM;                      // the number of bytes required
     // a certain dim is null
     int dimsArraysIndex = dimsIndex + dimCapacity * dimsLength;    // the index for
     // writing the int arrays
     // of dims with a STRING type
     int dimsArrayOffset = dimsArraysIndex - buffIndex;             // for saving the array position
     // in the buffer
-    int valueTypeOffset = OakUtils.VALUE_TYPE_OFFSET;              // offset from the dimIndex
-    int dataOffset = OakUtils.DATA_OFFSET;                         // for non-STRING dims
-    int arrayIndexOffset = OakUtils.ARRAY_INDEX_OFFSET;            // for STRING dims
-    int arrayLengthOffset = OakUtils.ARRAY_LENGTH_OFFSET;          // for STRING dims
+    int valueTypeOffset = OakKey.VALUE_TYPE_OFFSET;              // offset from the dimIndex
+    int dataOffset = OakKey.DATA_OFFSET;                         // for non-STRING dims
+    int arrayIndexOffset = OakKey.ARRAY_INDEX_OFFSET;            // for STRING dims
+    int arrayLengthOffset = OakKey.ARRAY_LENGTH_OFFSET;          // for STRING dims
 
     byteBuffer.putLong(timeStampIndex, timestamp);
     byteBuffer.putInt(dimsLengthIndex, dimsLength);
@@ -80,7 +80,7 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
     for (int i = 0; i < dimsLength; i++) {
       ValueType valueType = getDimValueType(i, dimensionDescsList);
       if (valueType == null || incrementalIndexRow.getDim(i) == null) {
-        byteBuffer.putInt(dimsIndex, OakUtils.NO_DIM);
+        byteBuffer.putInt(dimsIndex, OakKey.NO_DIM);
       } else {
         byteBuffer.putInt(dimsIndex + valueTypeOffset, valueType.ordinal());
         switch (valueType) {
@@ -102,7 +102,7 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
             dimsArrayOffset += (arr.length * Integer.BYTES);
             break;
           default:
-            byteBuffer.putInt(dimsIndex, OakUtils.NO_DIM);
+            byteBuffer.putInt(dimsIndex, OakKey.NO_DIM);
         }
       }
 
@@ -113,12 +113,12 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
   @Override
   public IncrementalIndexRow deserialize(ByteBuffer byteBuffer)
   {
-    long timeStamp = OakUtils.getTimestamp(byteBuffer);
-    int dimsLength = OakUtils.getDimsLength(byteBuffer);
-    int rowIndex = OakUtils.getRowIndex(byteBuffer);
+    long timeStamp = OakKey.getTimestamp(byteBuffer);
+    int dimsLength = OakKey.getDimsLength(byteBuffer);
+    int rowIndex = OakKey.getRowIndex(byteBuffer);
     Object[] dims = new Object[dimsLength];
     for (int dimIndex = 0; dimIndex < dimsLength; dimIndex++) {
-      Object dim = OakUtils.getDimValue(byteBuffer, dimIndex);
+      Object dim = OakKey.getDimValue(byteBuffer, dimIndex);
       dims[dimIndex] = dim;
     }
     return new IncrementalIndexRow(timeStamp, dims, dimensionDescsList, rowIndex);
@@ -134,7 +134,7 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
     // 4. multi-value: the serialization of each dim
     // 5. int array:   the array (for dims with capabilities of a String ValueType)
     int dimsLength = incrementalIndexRow.getDimsLength();
-    int allocSize = Long.BYTES + (2 * Integer.BYTES) + (OakUtils.ALLOC_PER_DIM * dimsLength);
+    int allocSize = Long.BYTES + (2 * Integer.BYTES) + (OakKey.ALLOC_PER_DIM * dimsLength);
 
     // When the dimensionDesc's capabilities are of type ValueType.STRING,
     // the object in timeAndDims.dims is of type int[].

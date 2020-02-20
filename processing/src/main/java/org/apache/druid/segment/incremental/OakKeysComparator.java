@@ -40,7 +40,7 @@ public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
   }
 
   @Override
-  public int compare(IncrementalIndexRow lhs, IncrementalIndexRow rhs)
+  public int compareKeys(IncrementalIndexRow lhs, IncrementalIndexRow rhs)
   {
     int retVal = Longs.compare(lhs.getTimestamp(), rhs.getTimestamp());
     int lhsDimsLength = lhs.getDimsLength();
@@ -87,12 +87,6 @@ public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
       return lengthDiff;
     }
     return retVal;
-  }
-
-  @Override
-  public int compareKeys(IncrementalIndexRow lhs, IncrementalIndexRow rhs)
-  {
-    return compare(lhs, rhs);
   }
 
   @Override
@@ -145,32 +139,32 @@ public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
     @Override
     public Object getDim(int dimIndex)
     {
-      return OakUtils.getDimValue(byteBuffer, dimIndex);
+      return OakKey.getDimValue(byteBuffer, dimIndex);
     }
 
     //Faster to check this way if dim is null instead of deserializing
     @Override
     public boolean isDimNull(int dimIndex)
     {
-      return OakUtils.isDimNull(byteBuffer, dimIndex);
+      return OakKey.isDimNull(byteBuffer, dimIndex);
     }
 
     @Override
     public long getTimestamp()
     {
-      return OakUtils.getTimestamp(byteBuffer);
+      return OakKey.getTimestamp(byteBuffer);
     }
 
     @Override
     public int getDimsLength()
     {
-      return OakUtils.getDimsLength(byteBuffer);
+      return OakKey.getDimsLength(byteBuffer);
     }
 
     @Override
     public int getRowIndex()
     {
-      return OakUtils.getRowIndex(byteBuffer);
+      return OakKey.getRowIndex(byteBuffer);
     }
   }
 
