@@ -36,7 +36,7 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
     this.dimensionDescsList = dimensionDescsList;
   }
 
-  private ValueType getDimValueType(int dimIndex, List<IncrementalIndex.DimensionDesc> dimensionDescsList)
+  private ValueType getDimValueType(int dimIndex)
   {
     IncrementalIndex.DimensionDesc dimensionDesc = dimensionDescsList.get(dimIndex);
     if (dimensionDesc == null) {
@@ -78,7 +78,7 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
     byteBuffer.putInt(dimsLengthIndex, dimsLength);
     byteBuffer.putInt(rowIndexIndex, rowIndex);
     for (int i = 0; i < dimsLength; i++) {
-      ValueType valueType = getDimValueType(i, dimensionDescsList);
+      ValueType valueType = getDimValueType(i);
       if (valueType == null || incrementalIndexRow.getDim(i) == null) {
         byteBuffer.putInt(dimsIndex, OakKey.NO_DIM);
       } else {
@@ -140,7 +140,7 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
     // the object in timeAndDims.dims is of type int[].
     // In this case, we need to know the array size before allocating the ByteBuffer.
     for (int i = 0; i < dimsLength; i++) {
-      if (getDimValueType(i, dimensionDescsList) != ValueType.STRING) {
+      if (getDimValueType(i) != ValueType.STRING) {
         continue;
       }
 
