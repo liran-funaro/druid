@@ -28,17 +28,17 @@ import java.nio.ByteBuffer;
 
 public final class OakKey
 {
-  static final Integer ALLOC_PER_DIM = 12;
-  static final Integer NO_DIM = -1;
-  static final Integer TIME_STAMP_INDEX = 0;
-  static final Integer DIMS_LENGTH_INDEX = TIME_STAMP_INDEX + Long.BYTES;
-  static final Integer ROW_INDEX_INDEX = DIMS_LENGTH_INDEX + Integer.BYTES;
-  static final Integer DIMS_INDEX = ROW_INDEX_INDEX + Integer.BYTES;
+  static final int NO_DIM = -1;
+  static final int ALLOC_PER_DIM = 12;
+  static final int TIME_STAMP_INDEX = 0;
+  static final int DIMS_LENGTH_INDEX = TIME_STAMP_INDEX + Long.BYTES;
+  static final int ROW_INDEX_INDEX = DIMS_LENGTH_INDEX + Integer.BYTES;
+  static final int DIMS_INDEX = ROW_INDEX_INDEX + Integer.BYTES;
   // Serialization and deserialization offsets
-  static final Integer VALUE_TYPE_OFFSET = 0;
-  static final Integer DATA_OFFSET = VALUE_TYPE_OFFSET + Integer.BYTES;
-  static final Integer ARRAY_INDEX_OFFSET = VALUE_TYPE_OFFSET + Integer.BYTES;
-  static final Integer ARRAY_LENGTH_OFFSET = ARRAY_INDEX_OFFSET + Integer.BYTES;
+  static final int VALUE_TYPE_OFFSET = 0;
+  static final int DATA_OFFSET = VALUE_TYPE_OFFSET + Integer.BYTES;
+  static final int ARRAY_INDEX_OFFSET = VALUE_TYPE_OFFSET + Integer.BYTES;
+  static final int ARRAY_LENGTH_OFFSET = ARRAY_INDEX_OFFSET + Integer.BYTES;
 
   private OakKey()
   {
@@ -105,30 +105,68 @@ public final class OakKey
     }
   }
 
-  public static class StringDim implements IndexedInts {
+  static long getDimSizeInBytes(ByteBuffer buff, int dimIndex)
+  {
+    int sizeInBytes = ALLOC_PER_DIM;
+    if (OakKey.getDimType(buff, dimIndex) == ValueType.STRING.ordinal()) {
+      int dimIndexInBuffer = OakKey.getDimIndexInBuffer(dimIndex);
+      int arraySize = buff.getInt(dimIndexInBuffer + OakKey.ARRAY_LENGTH_OFFSET);
+      sizeInBytes += arraySize * Integer.BYTES;
+    }
+    return sizeInBytes;
+  }
+
+  /**
+   * Estimates the size of the serialized key.
+   * Each serialized key contains:
+   * 1. a timeStamp
+   * 2. the dims array length
+   * 3. the rowIndex
+   * 4. the serialization of each dim
+   * 5. the array (for dims with capabilities of a String ValueType)
+   *
+   * @return long estimated bytes in memory of the key
+   */
+  static long getTotalDimSize(ByteBuffer buff)
+  {
+    long sizeInBytes = Long.BYTES + 2 * Integer.BYTES;
+    int dimLength = getDimsLength(buff);
+
+    for (int dimIndex = 0; dimIndex < dimLength; dimIndex++) {
+      sizeInBytes += getDimSizeInBytes(buff, dimIndex);
+    }
+    return sizeInBytes;
+  }
+
+  public static class StringDim implements IndexedInts
+  {
     ByteBuffer dimensions;
     int dimIndex;
     int arraySize;
     int arrayIndex;
 
-    public StringDim(final ByteBuffer dimensions) {
+    public StringDim(final ByteBuffer dimensions)
+    {
       this.dimensions = dimensions;
       dimIndex = -1;
     }
 
-    public void reset(final ByteBuffer dimensions) {
+    public void reset(final ByteBuffer dimensions)
+    {
       this.dimensions = dimensions;
       dimIndex = -1;
     }
 
-    public void setDimIndex(final int dimIndex) {
+    public void setDimIndex(final int dimIndex)
+    {
       this.dimIndex = dimIndex;
       int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
       arrayIndex = dimensions.position() + dimensions.getInt(dimIndexInBuffer + ARRAY_INDEX_OFFSET);
       arraySize = dimensions.getInt(dimIndexInBuffer + ARRAY_LENGTH_OFFSET);
     }
 
-    public int getDimIndex() {
+    public int getDimIndex()
+    {
       return dimIndex;
     }
 

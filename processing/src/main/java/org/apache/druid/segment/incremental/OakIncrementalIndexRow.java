@@ -20,7 +20,6 @@
 package org.apache.druid.segment.incremental;
 
 import com.oath.oak.OakRBuffer;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndex.DimensionDesc;
 
@@ -108,30 +107,12 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   }
 
   /**
-   * bytesInMemory estimates the size of the serialized IncrementalIndexRow key.
-   * Each serialized IncrementalRoeIndex contains:
-   * 1. a timeStamp
-   * 2. the dims array length
-   * 3. the rowIndex
-   * 4. the serialization of each dim
-   * 5. the array (for dims with capabilities of a String ValueType)
-   *
    * @return long estimated bytesInMemory
    */
   @Override
   public long estimateBytesInMemory()
   {
-    long sizeInBytes = Long.BYTES + 2 * Integer.BYTES;
-    for (int dimIndex = 0; dimIndex < getDimsLength(); dimIndex++) {
-      sizeInBytes += OakKey.ALLOC_PER_DIM;
-      int dimType = OakKey.getDimType(dimensions, dimIndex);
-      if (dimType == ValueType.STRING.ordinal()) {
-        int dimIndexInBuffer = OakKey.getDimIndexInBuffer(dimIndex);
-        int arraySize = dimensions.getInt(dimIndexInBuffer + OakKey.ARRAY_LENGTH_OFFSET);
-        sizeInBytes += (arraySize * Integer.BYTES);
-      }
-    }
-    return sizeInBytes;
+    return OakKey.getTotalDimSize(dimensions);
   }
 
   public boolean isDimInBounds(int dimIndex)
