@@ -213,13 +213,13 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
   {
     //TODO YONIGO - rewrite this function. maybe return an unserialized row?
     Function<Map.Entry<OakRBuffer, OakRBuffer>, Row> transformer = entry -> {
-      ByteBuffer serializedKey = entry.getKey().getByteBuffer();
+      long serializedKeyAddress = OakKey.getKeyAddress(entry.getKey().getByteBuffer());
       ByteBuffer serializedValue = entry.getValue().getByteBuffer();
-      long timeStamp = OakKey.getTimestamp(serializedKey);
-      int dimsLength = OakKey.getDimsLength(serializedKey);
+      long timeStamp = OakKey.getTimestamp(serializedKeyAddress);
+      int dimsLength = OakKey.getDimsLength(serializedKeyAddress);
       Map<String, Object> theVals = Maps.newLinkedHashMap();
       for (int i = 0; i < dimsLength; ++i) {
-        Object dim = OakKey.getDimValue(serializedKey, i);
+        Object dim = OakKey.getDimValue(serializedKeyAddress, i);
         DimensionDesc dimensionDesc = dimensionDescsList.get(i);
         if (dimensionDesc == null) {
           continue;
@@ -364,7 +364,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     {
       OakMapBuilder<IncrementalIndexRow, Row> builder = new OakMapBuilder<>(
           new OakKeysComparator(dimensionDescsList, rollup),
-          new OakKeySerializer(dimensionDescsList),
+          new OakKey.Serializer(dimensionDescsList),
           new OakValueSerializer(aggsManager, in),
           getMinIncrementalIndexRow()
       ).setMemoryCapacity(1L << 35); // 32GB, to be configured

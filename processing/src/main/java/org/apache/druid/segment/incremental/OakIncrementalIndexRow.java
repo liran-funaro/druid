@@ -30,7 +30,7 @@ import java.util.List;
 public class OakIncrementalIndexRow extends IncrementalIndexRow
 {
   private final OakRBuffer oakDimensions;
-  private ByteBuffer dimensions;
+  private long dimensions;
   private final OakRBuffer oakAggregations;
   @Nullable
   private ByteBuffer aggregations;
@@ -45,7 +45,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     super(0, null, dimensionDescsList);
     this.oakDimensions = dimensions;
     this.oakAggregations = aggregations;
-    this.dimensions = oakDimensions.getByteBuffer();
+    this.dimensions = OakKey.getKeyAddress(oakDimensions.getByteBuffer());
     this.aggregations = null;
     this.dimsLength = -1; // lazy initialization
     this.stringDim = null;
@@ -54,7 +54,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   public void reset()
   {
     dimsLength = -1;
-    dimensions = oakDimensions.getByteBuffer();
+    dimensions = OakKey.getKeyAddress(oakDimensions.getByteBuffer());
     aggregations = null;
     if (stringDim != null) {
       stringDim.reset(dimensions);

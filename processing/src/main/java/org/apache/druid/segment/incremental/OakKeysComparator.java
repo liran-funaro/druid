@@ -94,8 +94,11 @@ public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
   }
 
   @Override
-  public int compareSerializedKeys(ByteBuffer lhs, ByteBuffer rhs)
+  public int compareSerializedKeys(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer)
   {
+    long lhs = OakKey.getKeyAddress(lhsBuffer);
+    long rhs = OakKey.getKeyAddress(rhsBuffer);
+
     int retVal = Longs.compare(OakKey.getTimestamp(lhs), OakKey.getTimestamp(rhs));
     if (retVal != 0) {
       return retVal;
@@ -148,8 +151,10 @@ public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
   }
 
   @Override
-  public int compareKeyAndSerializedKey(IncrementalIndexRow lhs, ByteBuffer rhs)
+  public int compareKeyAndSerializedKey(IncrementalIndexRow lhs, ByteBuffer rhsBuffer)
   {
+    long rhs = OakKey.getKeyAddress(rhsBuffer);
+
     int retVal = Longs.compare(lhs.getTimestamp(), OakKey.getTimestamp(rhs));
     if (retVal != 0) {
       return retVal;
@@ -223,11 +228,11 @@ public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
     return true;
   }
 
-  private static boolean allNull(ByteBuffer row, int startPosition)
+  private static boolean allNull(long rowAddress, int startPosition)
   {
-    int dimLength = OakKey.getDimsLength(row);
+    int dimLength = OakKey.getDimsLength(rowAddress);
     for (int i = startPosition; i < dimLength; i++) {
-      if (!OakKey.isDimNull(row, i)) {
+      if (!OakKey.isDimNull(rowAddress, i)) {
         return false;
       }
     }
