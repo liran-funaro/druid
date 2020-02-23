@@ -66,6 +66,9 @@ public class IndexIngestionBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
+  @Param({"none", "small", "moderate", "high"})
+  private String rollupOpportunity;
+
   @Param({"onheap", "oak"})
   private String indexType;
 
@@ -85,14 +88,15 @@ public class IndexIngestionBenchmark
   {
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
-    rows = new ArrayList<InputRow>();
+    rows = new ArrayList<>();
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
 
     BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
-        schemaInfo.getDataInterval(),
-        rowsPerSegment
+        schemaInfo.getDataInterval().getStartMillis(),
+        RandomGenerationBenchmark.getValuesPerTimestamp(rollupOpportunity),
+        1000.0
     );
 
     for (int i = 0; i < rowsPerSegment; i++) {
