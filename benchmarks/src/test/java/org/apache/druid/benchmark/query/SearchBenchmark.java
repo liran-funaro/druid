@@ -113,9 +113,6 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class SearchBenchmark
 {
-  @Param({"1"})
-  private int numSegments;
-
   @Param({"750000"})
   private int rowsPerSegment;
 
@@ -142,8 +139,6 @@ public class SearchBenchmark
   private BenchmarkSchemaInfo schemaInfo;
   private Druids.SearchQueryBuilder queryBuilder;
   private SearchQuery query;
-
-  private ExecutorService executorService;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -324,8 +319,6 @@ public class SearchBenchmark
 
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
-    executorService = Execs.multiThreaded(numSegments, "SearchThreadPool");
-
     setupQueries();
 
     String[] schemaQuery = schemaAndQuery.split("\\.");
@@ -377,15 +370,22 @@ public class SearchBenchmark
       incIndex.close();
     }
   }
+
   @State(Scope.Benchmark)
   public static class QueryableIndexState
   {
+    @Param({"1"})
+    private int numSegments;
+
+    private ExecutorService executorService;
     private File qIndexesDir;
     private List<QueryableIndex> qIndexes;
 
     @Setup
     public void setup(SearchBenchmark global) throws IOException
     {
+      executorService = Execs.multiThreaded(numSegments, "SearchThreadPool");
+
       qIndexesDir = FileUtils.createTempDir();
       qIndexes = new ArrayList<>();
 
@@ -396,7 +396,7 @@ public class SearchBenchmark
           global.rowsPerSegment
       );
 
-      for (int i = 0; i < global.numSegments; i++) {
+      for (int i = 0; i < numSegments; i++) {
         log.info("Generating rows for segment " + i);
 
         IncrementalIndex incIndex = global.makeIncIndex();
@@ -488,7 +488,7 @@ public class SearchBenchmark
   {
     List<QueryRunner<Row>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = factory.getToolchest();
-    for (int i = 0; i < numSegments; i++) {
+    for (int i = 0; i < state.numSegments; i++) {
       String segmentName = "qIndex" + i;
       final QueryRunner<Result<SearchResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
@@ -500,7 +500,7 @@ public class SearchBenchmark
 
     QueryRunner theRunner = toolChest.postMergeQueryDecoration(
         new FinalizeResultsQueryRunner<>(
-            toolChest.mergeResults(factory.mergeRunners(executorService, singleSegmentRunners)),
+            toolChest.mergeResults(factory.mergeRunners(state.executorService, singleSegmentRunners)),
             toolChest
         )
     );

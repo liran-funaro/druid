@@ -104,9 +104,6 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class TopNBenchmark
 {
-  @Param({"1"})
-  private int numSegments;
-
   @Param({"750000"})
   private int rowsPerSegment;
 
@@ -115,9 +112,6 @@ public class TopNBenchmark
 
   @Param({"10"})
   private int threshold;
-
-  @Param({"oak", "onheap"})
-  private String indexType;
 
   private static final Logger log = new Logger(TopNBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -133,8 +127,6 @@ public class TopNBenchmark
   private BenchmarkSchemaInfo schemaInfo;
   private TopNQueryBuilder queryBuilder;
   private TopNQuery query;
-
-  private ExecutorService executorService;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -224,8 +216,6 @@ public class TopNBenchmark
 
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
-    executorService = Execs.multiThreaded(numSegments, "TopNThreadPool");
-
     setupQueries();
 
     String[] schemaQuery = schemaAndQuery.split("\\.");
@@ -252,6 +242,9 @@ public class TopNBenchmark
   @State(Scope.Benchmark)
   public static class IncrementalIndexState
   {
+    @Param({"oak", "onheap"})
+    private String indexType;
+
     IncrementalIndex incIndex;
 
     @Setup
@@ -264,7 +257,7 @@ public class TopNBenchmark
           global.rowsPerSegment
       );
 
-      incIndex = global.makeIncIndex();
+      incIndex = global.makeIncIndex(indexType);
 
       for (int j = 0; j < global.rowsPerSegment; j++) {
         InputRow row = gen.nextRow();
@@ -285,12 +278,18 @@ public class TopNBenchmark
   @State(Scope.Benchmark)
   public static class QueryableIndexState
   {
+    @Param({"1"})
+    private int numSegments;
+
+    private ExecutorService executorService;
     private File qIndexesDir;
     private List<QueryableIndex> qIndexes;
 
     @Setup
     public void setup(TopNBenchmark global) throws IOException
     {
+      executorService = Execs.multiThreaded(numSegments, "TopNThreadPool");
+
       qIndexesDir = FileUtils.createTempDir();
       qIndexes = new ArrayList<>();
 
@@ -301,10 +300,10 @@ public class TopNBenchmark
           global.rowsPerSegment
       );
 
-      for (int i = 0; i < global.numSegments; i++) {
+      for (int i = 0; i < numSegments; i++) {
         log.info("Generating rows for segment " + i);
 
-        IncrementalIndex incIndex = global.makeIncIndex();
+        IncrementalIndex incIndex = global.makeIncIndex("onheap");
 
         for (int j = 0; j < global.rowsPerSegment; j++) {
           InputRow row = gen.nextRow();
@@ -334,7 +333,7 @@ public class TopNBenchmark
     }
   }
 
-  private IncrementalIndex makeIncIndex()
+  private IncrementalIndex makeIncIndex(String indexType)
   {
     return new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
@@ -393,7 +392,7 @@ public class TopNBenchmark
   {
     List<QueryRunner<Result<TopNResultValue>>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = factory.getToolchest();
-    for (int i = 0; i < numSegments; i++) {
+    for (int i = 0; i < state.numSegments; i++) {
       SegmentId segmentId = SegmentId.dummy("qIndex" + i);
       QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
@@ -405,7 +404,7 @@ public class TopNBenchmark
 
     QueryRunner theRunner = toolChest.postMergeQueryDecoration(
         new FinalizeResultsQueryRunner<>(
-            toolChest.mergeResults(factory.mergeRunners(executorService, singleSegmentRunners)),
+            toolChest.mergeResults(factory.mergeRunners(state.executorService, singleSegmentRunners)),
             toolChest
         )
     );

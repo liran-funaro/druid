@@ -120,9 +120,6 @@ public class FilteredAggregatorBenchmark
   @Param({"true", "false"})
   private boolean descending;
 
-  @Param({"onheap", "oak"})
-  private String indexType;
-
   private static final Logger log = new Logger(FilteredAggregatorBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -195,6 +192,9 @@ public class FilteredAggregatorBenchmark
   @State(Scope.Benchmark)
   public static class IncrementalIndexState
   {
+    @Param({"onheap", "oak"})
+    private String indexType;
+
     IncrementalIndex incIndex;
 
     @Setup
@@ -207,7 +207,7 @@ public class FilteredAggregatorBenchmark
           global.rowsPerSegment
       );
 
-      incIndex = global.makeIncIndex(global.schemaInfo.getAggsArray());
+      incIndex = global.makeIncIndex(indexType, global.schemaInfo.getAggsArray());
 
       for (int j = 0; j < global.rowsPerSegment; j++) {
         InputRow row = gen.nextRow();
@@ -228,8 +228,11 @@ public class FilteredAggregatorBenchmark
   @State(Scope.Benchmark)
   public static class FilteredIncrementalIndexState
   {
+    @Param({"onheap", "oak"})
+    private String indexType;
+
     IncrementalIndex incIndex;
-    private List<InputRow> inputRows;
+    List<InputRow> inputRows;
 
     @Setup
     public void setup(FilteredAggregatorBenchmark global) throws IndexSizeExceededException
@@ -241,8 +244,9 @@ public class FilteredAggregatorBenchmark
           global.rowsPerSegment
       );
 
-      incIndex = global.makeIncIndex(global.filteredMetrics);
+      incIndex = global.makeIncIndex(indexType, global.filteredMetrics);
 
+      inputRows = new ArrayList<>();
       for (int j = 0; j < global.rowsPerSegment; j++) {
         InputRow row = gen.nextRow();
         // if (j % 10000 == 0) {
@@ -275,7 +279,7 @@ public class FilteredAggregatorBenchmark
           global.rowsPerSegment
       );
 
-      IncrementalIndex incIndex = global.makeIncIndex(global.schemaInfo.getAggsArray());
+      IncrementalIndex incIndex = global.makeIncIndex("onheap", global.schemaInfo.getAggsArray());
 
       for (int j = 0; j < global.rowsPerSegment; j++) {
         InputRow row = gen.nextRow();
@@ -303,7 +307,7 @@ public class FilteredAggregatorBenchmark
     }
   }
 
-  private IncrementalIndex makeIncIndex(AggregatorFactory[] metrics)
+  private IncrementalIndex makeIncIndex(String indexType, AggregatorFactory[] metrics)
   {
     return new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(metrics)

@@ -107,12 +107,6 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class ScanBenchmark
 {
-  @Param({"2", "4"})
-  private int numSegments;
-
-  @Param({"2"})
-  private int numProcessingThreads;
-
   @Param({"200000"})
   private int rowsPerSegment;
 
@@ -124,9 +118,6 @@ public class ScanBenchmark
 
   @Param({"NONE", "DESCENDING", "ASCENDING"})
   private static ScanQuery.Order ordering;
-
-  @Param({"onheap", "oak"})
-  private String indexType;
 
   private static final Logger log = new Logger(ScanBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -142,8 +133,6 @@ public class ScanBenchmark
   private BenchmarkSchemaInfo schemaInfo;
   private Druids.ScanQueryBuilder queryBuilder;
   private ScanQuery query;
-
-  private ExecutorService executorService;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -254,8 +243,6 @@ public class ScanBenchmark
 
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
-    executorService = Execs.multiThreaded(numProcessingThreads, "ScanThreadPool");
-
     setupQueries();
 
     String[] schemaQuery = schemaAndQuery.split("\\.");
@@ -281,6 +268,9 @@ public class ScanBenchmark
   @State(Scope.Benchmark)
   public static class IncrementalIndexState
   {
+    @Param({"onheap", "oak"})
+    private String indexType;
+
     IncrementalIndex incIndex;
 
     @Setup
@@ -293,7 +283,7 @@ public class ScanBenchmark
           global.rowsPerSegment
       );
 
-      incIndex = global.makeIncIndex();
+      incIndex = global.makeIncIndex(indexType);
 
       for (int j = 0; j < global.rowsPerSegment; j++) {
         InputRow row = gen.nextRow();
@@ -314,12 +304,21 @@ public class ScanBenchmark
   @State(Scope.Benchmark)
   public static class QueryableIndexState
   {
+    @Param({"2", "4"})
+    private int numSegments;
+
+    @Param({"2"})
+    private int numProcessingThreads;
+
+    private ExecutorService executorService;
     private File qIndexesDir;
     private List<QueryableIndex> qIndexes;
 
     @Setup
     public void setup(ScanBenchmark global) throws IOException
     {
+      executorService = Execs.multiThreaded(numProcessingThreads, "ScanThreadPool");
+
       qIndexesDir = FileUtils.createTempDir();
       qIndexes = new ArrayList<>();
 
@@ -330,10 +329,10 @@ public class ScanBenchmark
           global.rowsPerSegment
       );
 
-      for (int i = 0; i < global.numSegments; i++) {
+      for (int i = 0; i < numSegments; i++) {
         log.info("Generating rows for segment " + i);
 
-        IncrementalIndex incIndex = global.makeIncIndex();
+        IncrementalIndex incIndex = global.makeIncIndex("onheap");
 
         for (int j = 0; j < global.rowsPerSegment; j++) {
           InputRow row = gen.nextRow();
@@ -363,7 +362,7 @@ public class ScanBenchmark
     }
   }
 
-  private IncrementalIndex makeIncIndex()
+  private IncrementalIndex makeIncIndex(String indexType)
   {
     return new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
@@ -456,7 +455,7 @@ public class ScanBenchmark
     List<SegmentDescriptor> segmentDescriptors = new ArrayList<>();
     List<QueryRunner<Row>> runners = new ArrayList<>();
     QueryToolChest toolChest = factory.getToolchest();
-    for (int i = 0; i < numSegments; i++) {
+    for (int i = 0; i < state.numSegments; i++) {
       String segmentName = "qIndex";
       final QueryRunner<Result<ScanResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
@@ -475,7 +474,7 @@ public class ScanBenchmark
 
     QueryRunner theRunner = toolChest.postMergeQueryDecoration(
         new FinalizeResultsQueryRunner<>(
-            toolChest.mergeResults(factory.mergeRunners(executorService, runners)),
+            toolChest.mergeResults(factory.mergeRunners(state.executorService, runners)),
             toolChest
         )
     );

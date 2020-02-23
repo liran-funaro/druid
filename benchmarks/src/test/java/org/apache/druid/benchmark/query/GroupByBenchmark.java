@@ -104,6 +104,10 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -122,9 +126,6 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class GroupByBenchmark
 {
-  @Param({"4"})
-  private int numSegments;
-
   @Param({"2", "4"})
   private int numProcessingThreads;
 
@@ -146,9 +147,6 @@ public class GroupByBenchmark
   @Param({"true", "false"})
   private String vectorize;
 
-  @Param({"onheap", "oak"})
-  private String indexType;
-
   private static final Logger log = new Logger(GroupByBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -163,8 +161,6 @@ public class GroupByBenchmark
 
   private BenchmarkSchemaInfo schemaInfo;
   private GroupByQuery query;
-
-  private ExecutorService executorService;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -435,8 +431,6 @@ public class GroupByBenchmark
 
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
-    executorService = Execs.multiThreaded(numProcessingThreads, "GroupByThreadPool[%d]");
-
     setupQueries();
 
     String[] schemaQuery = schemaAndQuery.split("\\.");
@@ -524,10 +518,12 @@ public class GroupByBenchmark
     );
   }
 
-
   @State(Scope.Benchmark)
   public static class IncrementalIndexState
   {
+    @Param({"onheap", "oak"})
+    private String indexType;
+
     IncrementalIndex incIndex;
 
     @Setup(Level.Trial)
@@ -540,7 +536,7 @@ public class GroupByBenchmark
           global.rowsPerSegment
       );
 
-      incIndex = global.makeIncIndex(global.schemaInfo.isWithRollup());
+      incIndex = global.makeIncIndex(indexType, global.schemaInfo.isWithRollup());
 
       for (int j = 0; j < global.rowsPerSegment; j++) {
         InputRow row = gen.nextRow();
@@ -561,12 +557,18 @@ public class GroupByBenchmark
   @State(Scope.Benchmark)
   public static class QueryableIndexState
   {
+    @Param({"4"})
+    private int numSegments;
+
+    private ExecutorService executorService;
     private File qIndexesDir;
     private List<QueryableIndex> qIndexes;
 
     @Setup(Level.Trial)
     public void setup(GroupByBenchmark global) throws IOException
     {
+      executorService = Execs.multiThreaded(global.numProcessingThreads, "GroupByThreadPool[%d]");
+
       qIndexesDir = FileUtils.createTempDir();
       qIndexes = new ArrayList<>();
 
@@ -577,10 +579,10 @@ public class GroupByBenchmark
           global.rowsPerSegment
       );
 
-      for (int i = 0; i < global.numSegments; i++) {
+      for (int i = 0; i < numSegments; i++) {
         log.info("Generating rows for segment " + i);
 
-        IncrementalIndex incIndex = global.makeIncIndex(global.schemaInfo.isWithRollup());
+        IncrementalIndex incIndex = global.makeIncIndex("onheap", global.schemaInfo.isWithRollup());
 
         for (int j = 0; j < global.rowsPerSegment; j++) {
           InputRow row = gen.nextRow();
@@ -610,7 +612,7 @@ public class GroupByBenchmark
     }
   }
 
-  private IncrementalIndex makeIncIndex(boolean withRollup)
+  private IncrementalIndex makeIncIndex(String indexType, boolean withRollup)
   {
     return new IncrementalIndex.Builder()
         .setIndexSchema(
@@ -685,7 +687,7 @@ public class GroupByBenchmark
     QueryToolChest<ResultRow, GroupByQuery> toolChest = factory.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            factory.mergeRunners(executorService, makeMultiRunners(state))
+            factory.mergeRunners(state.executorService, makeMultiRunners(state))
         ),
         (QueryToolChest) toolChest
     );
@@ -703,7 +705,7 @@ public class GroupByBenchmark
     QueryToolChest<ResultRow, GroupByQuery> toolChest = factory.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            factory.mergeRunners(executorService, makeMultiRunners(state))
+            factory.mergeRunners(state.executorService, makeMultiRunners(state))
         ),
         (QueryToolChest) toolChest
     );
@@ -729,7 +731,7 @@ public class GroupByBenchmark
                 new DefaultObjectMapper(new SmileFactory()),
                 ResultRow.class,
                 toolChest.mergeResults(
-                    factory.mergeRunners(executorService, makeMultiRunners(state))
+                    factory.mergeRunners(state.executorService, makeMultiRunners(state))
                 )
             )
         ),
@@ -744,7 +746,7 @@ public class GroupByBenchmark
   private List<QueryRunner<ResultRow>> makeMultiRunners(QueryableIndexState state)
   {
     List<QueryRunner<ResultRow>> runners = new ArrayList<>();
-    for (int i = 0; i < numSegments; i++) {
+    for (int i = 0; i < state.numSegments; i++) {
       String segmentName = "qIndex" + i;
       QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
@@ -754,5 +756,21 @@ public class GroupByBenchmark
       runners.add(factory.getToolchest().preMergeQueryDecoration(runner));
     }
     return runners;
+  }
+
+  public static void main(String[] args) throws RunnerException
+  {
+    Options opt = new OptionsBuilder()
+            .include(GroupByBenchmark.class.getSimpleName() + ".queryMultiQueryableIndexX$")
+            .warmupIterations(3)
+            .measurementIterations(3)
+            .forks(0)
+            .threads(1)
+            .param("indexType", "onheap")
+            .param("rollup", "false")
+            .param("rowsPerSegment", "10000")
+            .build();
+
+    new Runner(opt).run();
   }
 }
