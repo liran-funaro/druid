@@ -208,7 +208,7 @@ public class CliPeon extends GuiceRunnable
             binder.bind(SingleTaskBackgroundRunner.class).in(ManageLifecycle.class);
 
             binder.bindConstant().annotatedWith(Names.named("incrementalIndexImpl"))
-                .to(properties.getProperty("druid.indexer.implementation", "onheap"));
+                  .to(properties.getProperty("druid.indexer.implementation", "onheap"));
 
             bindRealtimeCache(binder);
             bindCoordinatorHandoffNotiferAndClient(binder);
