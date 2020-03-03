@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -342,6 +343,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     private int maxRowCount;
     private long maxBytesInMemory;
 
+    private static final Logger log = new Logger(IncrementalIndex.class);
+
     public Builder()
     {
       incrementalIndexSchema = null;
@@ -436,6 +439,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     public IncrementalIndex build(String incrementalIndexImpl, final NonBlockingPool<ByteBuffer> bufferPool)
     {
+      log.info("Building incremental index of type: %s", incrementalIndexImpl);
+
       switch (incrementalIndexImpl) {
         case "onheap":
           return buildOnheap();
