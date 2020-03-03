@@ -106,7 +106,9 @@ def raise_friendly_error(e):
     reresult = re.search(r'<pre>(.*?)</pre>', text, re.DOTALL)
     if reresult:
       text = reresult.group(1).strip()
-    raise Exception("HTTP Error {0}: {1}, check overlord log for more details.\n{2}".format(e.code, e.reason, text))
+
+    reason = getattr(e, 'reason', None)
+    raise Exception("HTTP Error {0}: {1}, check overlord log for more details.\n{2}".format(e.code, reason, text))
   raise e
 
 def await_load_completion(args, datasource, timeout_at):
