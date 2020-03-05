@@ -56,6 +56,8 @@ import java.util.function.Function;
  */
 public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
 {
+  public static int chunkMaxItems = 256;
+
   private final OakFactsHolder facts;
   private AggsManager aggsManager;
 
@@ -367,7 +369,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
           new OakKey.Serializer(dimensionDescsList),
           new OakValueSerializer(aggsManager, in),
           getMinIncrementalIndexRow()
-      ).setMemoryCapacity(1L << 35); // 32GB, to be configured
+      ).setMemoryCapacity(1L << 35).setChunkMaxItems(chunkMaxItems); // 32GB, to be configured
       oak = builder.build();
       this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
       this.dimensionDescsList = dimensionDescsList;
