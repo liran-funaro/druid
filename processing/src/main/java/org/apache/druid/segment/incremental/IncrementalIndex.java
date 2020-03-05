@@ -31,6 +31,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.collections.NonBlockingPool;
+import org.apache.druid.collections.StupidPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.InputRow;
@@ -470,10 +471,17 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       );
     }
 
-    public IncrementalIndex buildOffheap(final NonBlockingPool<ByteBuffer> bufferPool)
+    public IncrementalIndex buildOffheap(NonBlockingPool<ByteBuffer> bufferPool)
     {
       if (maxRowCount <= 0) {
         throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
+      }
+
+      if (bufferPool == null) {
+        bufferPool = new StupidPool<>(
+            "OffheapIncrementalIndex-bufferPool",
+            () -> ByteBuffer.allocate(256 * 1024)
+        );
       }
 
       return new OffheapIncrementalIndex(
