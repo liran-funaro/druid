@@ -365,7 +365,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
                           int maxRowCount)
     {
       OakMapBuilder<IncrementalIndexRow, Row> builder = new OakMapBuilder<>(
-          new OakKeysComparator(dimensionDescsList, rollup),
+          new OakKey.IncrementalIndexRowComparator(dimensionDescsList, rollup),
           new OakKey.Serializer(dimensionDescsList),
           new OakValueSerializer(aggsManager, in),
           getMinIncrementalIndexRow()

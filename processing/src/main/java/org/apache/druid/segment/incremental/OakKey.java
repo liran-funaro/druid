@@ -19,8 +19,12 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
+import com.oath.oak.OakComparator;
 import com.oath.oak.OakSerializer;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -330,6 +334,218 @@ public final class OakKey
       }
 
       return allocSize;
+    }
+  }
+
+  public static class IncrementalIndexRowComparator implements OakComparator<IncrementalIndexRow>
+  {
+    private final List<IncrementalIndex.DimensionDesc> dimensionDescsList;
+    private final boolean rollup;
+
+    public IncrementalIndexRowComparator(List<IncrementalIndex.DimensionDesc> dimensionDescsList, boolean rollup)
+    {
+      this.dimensionDescsList = dimensionDescsList;
+      this.rollup = rollup;
+    }
+
+    @Override
+    public int compareKeys(IncrementalIndexRow lhs, IncrementalIndexRow rhs)
+    {
+      int retVal = Longs.compare(lhs.getTimestamp(), rhs.getTimestamp());
+      if (retVal != 0) {
+        return retVal;
+      }
+
+      int lhsDimsLength = lhs.getDimsLength();
+      int rhsDimsLength = rhs.getDimsLength();
+      int numComparisons = Math.min(lhsDimsLength, rhsDimsLength);
+
+      int index = 0;
+      while (retVal == 0 && index < numComparisons) {
+        final Object lhsIdxs = lhs.getDim(index);
+        final Object rhsIdxs = rhs.getDim(index);
+
+        if (lhsIdxs == null) {
+          if (rhsIdxs == null) {
+            ++index;
+            continue;
+          }
+          return -1;
+        }
+
+        if (rhsIdxs == null) {
+          return 1;
+        }
+
+        final DimensionIndexer indexer = dimensionDescsList.get(index).getIndexer();
+        retVal = indexer.compareUnsortedEncodedKeyComponents(lhsIdxs, rhsIdxs);
+        ++index;
+      }
+      if (retVal == 0) {
+        int lengthDiff = Ints.compare(lhsDimsLength, rhsDimsLength);
+        if (lengthDiff == 0) {
+          return lastCompare(lhs.getRowIndex(), rhs.getRowIndex());
+        }
+        if (lengthDiff > 0) {
+          // lhs has bigger dims
+          if (allNull(lhs, numComparisons)) {
+            return lastCompare(lhs.getRowIndex(), rhs.getRowIndex());
+          }
+        } else {
+          // rhs has bigger dims
+          if (allNull(rhs, numComparisons)) {
+            return lastCompare(lhs.getRowIndex(), rhs.getRowIndex());
+          }
+        }
+        return lengthDiff;
+      }
+      return retVal;
+    }
+
+    @Override
+    public int compareSerializedKeys(ByteBuffer lhsBuffer, ByteBuffer rhsBuffer)
+    {
+      long lhs = getKeyAddress(lhsBuffer);
+      long rhs = getKeyAddress(rhsBuffer);
+
+      int retVal = Longs.compare(getTimestamp(lhs), getTimestamp(rhs));
+      if (retVal != 0) {
+        return retVal;
+      }
+
+      int lhsDimsLength = getDimsLength(lhs);
+      int rhsDimsLength = getDimsLength(rhs);
+      int numComparisons = Math.min(lhsDimsLength, rhsDimsLength);
+
+      int index = 0;
+      while (retVal == 0 && index < numComparisons) {
+        final Object lhsIdxs = getDimValue(lhs, index);
+        final Object rhsIdxs = getDimValue(rhs, index);
+
+        if (lhsIdxs == null) {
+          if (rhsIdxs == null) {
+            ++index;
+            continue;
+          }
+          return -1;
+        }
+
+        if (rhsIdxs == null) {
+          return 1;
+        }
+
+        final DimensionIndexer indexer = dimensionDescsList.get(index).getIndexer();
+        retVal = indexer.compareUnsortedEncodedKeyComponents(lhsIdxs, rhsIdxs);
+        ++index;
+      }
+      if (retVal == 0) {
+        int lengthDiff = Ints.compare(lhsDimsLength, rhsDimsLength);
+        if (lengthDiff == 0) {
+          return lastCompare(getRowIndex(lhs), getRowIndex(rhs));
+        }
+        if (lengthDiff > 0) {
+          // lhs has bigger dims
+          if (allNull(lhs, numComparisons)) {
+            return lastCompare(getRowIndex(lhs), getRowIndex(rhs));
+          }
+        } else {
+          // rhs has bigger dims
+          if (allNull(rhs, numComparisons)) {
+            return lastCompare(getRowIndex(lhs), getRowIndex(rhs));
+          }
+        }
+        return lengthDiff;
+      }
+      return retVal;
+    }
+
+    @Override
+    public int compareKeyAndSerializedKey(IncrementalIndexRow lhs, ByteBuffer rhsBuffer)
+    {
+      long rhs = getKeyAddress(rhsBuffer);
+
+      int retVal = Longs.compare(lhs.getTimestamp(), getTimestamp(rhs));
+      if (retVal != 0) {
+        return retVal;
+      }
+
+      int lhsDimsLength = lhs.getDimsLength();
+      int rhsDimsLength = getDimsLength(rhs);
+      int numComparisons = Math.min(lhsDimsLength, rhsDimsLength);
+
+      int index = 0;
+      while (retVal == 0 && index < numComparisons) {
+        final Object lhsIdxs = lhs.getDim(index);
+        final Object rhsIdxs = getDimValue(rhs, index);
+
+        if (lhsIdxs == null) {
+          if (rhsIdxs == null) {
+            ++index;
+            continue;
+          }
+          return -1;
+        }
+
+        if (rhsIdxs == null) {
+          return 1;
+        }
+
+        final DimensionIndexer indexer = dimensionDescsList.get(index).getIndexer();
+        retVal = indexer.compareUnsortedEncodedKeyComponents(lhsIdxs, rhsIdxs);
+        ++index;
+      }
+      if (retVal == 0) {
+        int lengthDiff = Ints.compare(lhsDimsLength, rhsDimsLength);
+        if (lengthDiff == 0) {
+          return lastCompare(lhs.getRowIndex(), getRowIndex(rhs));
+        }
+        if (lengthDiff > 0) {
+          // lhs has bigger dims
+          if (allNull(lhs, numComparisons)) {
+            return lastCompare(lhs.getRowIndex(), getRowIndex(rhs));
+          }
+        } else {
+          // rhs has bigger dims
+          if (allNull(rhs, numComparisons)) {
+            return lastCompare(lhs.getRowIndex(), getRowIndex(rhs));
+          }
+        }
+        return lengthDiff;
+      }
+      return retVal;
+    }
+
+    private int lastCompare(int lsIndex, int rsIndex)
+    {
+      if (!rollup || lsIndex == IncrementalIndexRow.EMPTY_ROW_INDEX || rsIndex == IncrementalIndexRow.EMPTY_ROW_INDEX) {
+        // If we are not rollup then keys shouldnt collide.
+        // If one of the keys is EMPTY_ROW_INDEX this is a lower or upper bound key and must be compared.
+        return lsIndex - rsIndex;
+      } else {
+        return 0;
+      }
+    }
+
+    private static boolean allNull(IncrementalIndexRow row, int startPosition)
+    {
+      int dimLength = row.getDimsLength();
+      for (int i = startPosition; i < dimLength; i++) {
+        if (!row.isDimNull(i)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    private static boolean allNull(long rowAddress, int startPosition)
+    {
+      int dimLength = getDimsLength(rowAddress);
+      for (int i = startPosition; i < dimLength; i++) {
+        if (!isDimNull(rowAddress, i)) {
+          return false;
+        }
+      }
+      return true;
     }
   }
 }
