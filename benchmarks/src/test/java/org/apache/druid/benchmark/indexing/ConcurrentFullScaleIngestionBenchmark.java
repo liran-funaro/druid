@@ -79,8 +79,8 @@ public class ConcurrentFullScaleIngestionBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"none", "small", "moderate", "high"})
-  private String rollupOpportunity;
+  @Param({"0", "1", "10", "100", "1000", "10000"})
+  private int rollupOpportunity;
 
   @Param({"onheap", "oak"})
   private String indexType;
@@ -133,7 +133,7 @@ public class ConcurrentFullScaleIngestionBenchmark
           globalState.schemaInfo.getColumnSchemas(),
           RNG_SEED,
           globalState.schemaInfo.getDataInterval().getStartMillis(),
-          RandomGenerationBenchmark.getValuesPerTimestamp(globalState.rollupOpportunity),
+          globalState.rollupOpportunity,
           1000.0
       );
 
@@ -270,7 +270,7 @@ public class ConcurrentFullScaleIngestionBenchmark
         .threads(4)
         .param("indexType", "onheap")
         .param("rollup", "false")
-        .param("rollupOpportunity", "none")
+        .param("rollupOpportunity", "0")
         .param("maxRowsBeforePersist", "1000000")
         .param("rowsPerSegment", "1000000")
         // .param("rowsPerSegment", "1000000")

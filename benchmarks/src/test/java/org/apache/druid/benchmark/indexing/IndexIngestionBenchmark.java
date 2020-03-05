@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OakIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -47,6 +48,7 @@ import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
+import org.openjdk.jmh.runner.options.TimeValue;
 
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
@@ -66,11 +68,14 @@ public class IndexIngestionBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"none", "small", "moderate", "high"})
-  private String rollupOpportunity;
+  @Param({"0", "1", "10", "100", "1000", "10000"})
+  private int rollupOpportunity;
 
   @Param({"onheap", "oak"})
   private String indexType;
+
+  @Param({"256", "512", "1024", "4096"})
+  private int chunkMaxItems;
 
   private static final Logger log = new Logger(IndexIngestionBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -95,17 +100,19 @@ public class IndexIngestionBenchmark
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval().getStartMillis(),
-        RandomGenerationBenchmark.getValuesPerTimestamp(rollupOpportunity),
+        rollupOpportunity,
         1000.0
     );
 
     for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = gen.nextRow();
-      if (i % 10000 == 0) {
-        log.info(i + " rows generated.");
-      }
+      // if (i % 10000 == 0) {
+      //   log.info(i + " rows generated.");
+      // }
       rows.add(row);
     }
+
+    OakIncrementalIndex.chunkMaxItems = chunkMaxItems;
   }
 
   @Setup(Level.Invocation)
@@ -149,14 +156,15 @@ public class IndexIngestionBenchmark
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(IndexIngestionBenchmark.class.getSimpleName() + ".add$")
-        .warmupIterations(3)
-        .measurementIterations(10)
+        .include(IndexIngestionBenchmark.class.getSimpleName() + ".addRows$")
+        .warmupIterations(0)
+        .measurementIterations(1).measurementTime(TimeValue.NONE)
         .forks(0)
         .threads(1)
-        .param("indexType", "oak")
+        .param("indexType", "offheap")
         .param("rollup", "true")
-        .param("rowsPerSegment", "2000000")
+        .param("rollupOpportunity", "10000")
+        .param("rowsPerSegment", "100000")
         .build();
 
     new Runner(opt).run();

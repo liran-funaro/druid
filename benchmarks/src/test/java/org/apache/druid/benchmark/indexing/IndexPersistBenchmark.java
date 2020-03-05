@@ -91,8 +91,8 @@ public class IndexPersistBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"none", "small", "moderate", "high"})
-  private String rollupOpportunity;
+  @Param({"0", "1", "10", "100", "1000", "10000"})
+  private int rollupOpportunity;
 
   @Param({"onheap", "oak"})
   private String indexType;
@@ -116,7 +116,7 @@ public class IndexPersistBenchmark
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval().getStartMillis(),
-        RandomGenerationBenchmark.getValuesPerTimestamp(rollupOpportunity),
+        rollupOpportunity,
         1000.0
     );
 
@@ -190,7 +190,7 @@ public class IndexPersistBenchmark
         .threads(1)
         .param("indexType", "oak")
         .param("rollup", "true")
-        .param("rollupOpportunity", "none")
+        .param("rollupOpportunity", "0")
         .param("rowsPerSegment", "1000000")
         .build();
 

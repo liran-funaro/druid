@@ -57,8 +57,8 @@ public class RandomGenerationBenchmark
   @Param({"basic"})
   private String schema;
 
-  @Param({"none", "moderate", "high"})
-  private String rollupOpportunity;
+  @Param({"0", "1", "10", "100", "1000", "10000"})
+  private int rollupOpportunity;
 
   private static final int RNG_SEED = 9999;
 
@@ -75,20 +75,6 @@ public class RandomGenerationBenchmark
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
   }
 
-  public static int getValuesPerTimestamp(String rollupOpportunity)
-  {
-    switch (rollupOpportunity) {
-      case "high":
-        return 10000;
-      case "moderate":
-        return 1000;
-      case "small":
-        return 1;
-      default:
-        return 0;
-    }
-  }
-
   @Setup(Level.Invocation)
   public void setup2()
   {
@@ -96,7 +82,7 @@ public class RandomGenerationBenchmark
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval().getStartMillis(),
-        getValuesPerTimestamp(rollupOpportunity),
+        rollupOpportunity,
         1000.0
     );
   }
@@ -126,7 +112,7 @@ public class RandomGenerationBenchmark
         .measurementIterations(10)
         .forks(0)
         .threads(1)
-        .param("rollupOpportunity", "none")
+        .param("rollupOpportunity", "0")
         .param("rowsPerSegment", "1000000")
         // .param("rowsPerSegment", "1000000")
         .build();
