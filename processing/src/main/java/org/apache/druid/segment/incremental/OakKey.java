@@ -166,28 +166,28 @@ public final class OakKey
 
   public static class StringDim implements IndexedInts
   {
-    long dimensions;
+    long dimensionsAddress;
     int dimIndex;
     int arraySize;
     long arrayAddress;
 
-    public StringDim(long dimensions)
+    public StringDim(long dimensionsAddress)
     {
-      this.dimensions = dimensions;
+      this.dimensionsAddress = dimensionsAddress;
       dimIndex = -1;
     }
 
     public void reset(long dimensions)
     {
-      this.dimensions = dimensions;
+      this.dimensionsAddress = dimensions;
       dimIndex = -1;
     }
 
     public void setDimIndex(final int dimIndex)
     {
       this.dimIndex = dimIndex;
-      long dimAddress = this.dimensions + getDimIndexInBuffer(dimIndex);
-      arrayAddress = dimensions + UNSAFE.getInt(dimAddress + ARRAY_INDEX_OFFSET);
+      long dimAddress = this.dimensionsAddress + getDimIndexInBuffer(dimIndex);
+      arrayAddress = dimensionsAddress + UNSAFE.getInt(dimAddress + ARRAY_INDEX_OFFSET);
       arraySize = UNSAFE.getInt(dimAddress + ARRAY_LENGTH_OFFSET);
     }
 
