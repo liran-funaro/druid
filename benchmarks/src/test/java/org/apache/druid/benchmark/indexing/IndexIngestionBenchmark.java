@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.OakIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -68,14 +67,11 @@ public class IndexIngestionBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"0", "1", "10", "100", "1000", "10000"})
+  @Param({"1000"})
   private int rollupOpportunity;
 
   @Param({"onheap", "oak"})
   private String indexType;
-
-  @Param({"256", "512", "1024", "4096"})
-  private int chunkMaxItems;
 
   private static final Logger log = new Logger(IndexIngestionBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -111,8 +107,6 @@ public class IndexIngestionBenchmark
       // }
       rows.add(row);
     }
-
-    OakIncrementalIndex.chunkMaxItems = chunkMaxItems;
   }
 
   @Setup(Level.Invocation)
@@ -161,7 +155,7 @@ public class IndexIngestionBenchmark
         .measurementIterations(1).measurementTime(TimeValue.NONE)
         .forks(0)
         .threads(1)
-        .param("indexType", "offheap")
+        .param("indexType", "oak")
         .param("rollup", "true")
         .param("rollupOpportunity", "10000")
         .param("rowsPerSegment", "100000")

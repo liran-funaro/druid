@@ -91,7 +91,7 @@ public class IndexPersistBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"0", "1", "10", "100", "1000", "10000"})
+  @Param({"1000"})
   private int rollupOpportunity;
 
   @Param({"onheap", "oak"})
