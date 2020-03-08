@@ -45,7 +45,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     super(0, null, dimensionDescsList);
     this.oakDimensions = dimensions;
     this.oakAggregations = aggregations;
-    this.dimensions = OakKey.getKeyAddress(oakDimensions.getByteBuffer());
+    this.dimensions = oakDimensions.address();
     this.aggregations = null;
     this.dimsLength = -1; // lazy initialization
     this.stringDim = null;
@@ -54,7 +54,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   public void reset()
   {
     dimsLength = -1;
-    dimensions = OakKey.getKeyAddress(oakDimensions.getByteBuffer());
+    dimensions = oakDimensions.address();
     aggregations = null;
     if (stringDim != null) {
       stringDim.reset(dimensions);
