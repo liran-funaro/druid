@@ -94,12 +94,6 @@ public final class OakKey
     return DIMS_INDEX + dimIndex * ALLOC_PER_DIM;
   }
 
-  static int getDimType(long address, int dimIndex)
-  {
-    int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
-    return UNSAFE.getInt(address + dimIndexInBuffer + VALUE_TYPE_OFFSET);
-  }
-
   static boolean isDimNull(long address, int dimIndex)
   {
     int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
@@ -168,6 +162,7 @@ public final class OakKey
   {
     long dimensionsAddress;
     int dimIndex;
+    boolean initialized;
     int arraySize;
     long arrayAddress;
 
@@ -175,36 +170,51 @@ public final class OakKey
     {
       this.dimensionsAddress = dimensionsAddress;
       dimIndex = -1;
+      initialized = false;
     }
 
     public void reset(long dimensions)
     {
       this.dimensionsAddress = dimensions;
       dimIndex = -1;
+      initialized = false;
     }
 
     public void setDimIndex(final int dimIndex)
     {
       this.dimIndex = dimIndex;
+      initialized = false;
+    }
+
+    private void init()
+    {
+      if (initialized) {
+        return;
+      }
+
       long dimAddress = this.dimensionsAddress + getDimIndexInBuffer(dimIndex);
       arrayAddress = dimensionsAddress + UNSAFE.getInt(dimAddress + ARRAY_INDEX_OFFSET);
       arraySize = UNSAFE.getInt(dimAddress + ARRAY_LENGTH_OFFSET);
+      initialized = true;
     }
 
     public int getDimIndex()
     {
+      init();
       return dimIndex;
     }
 
     @Override
     public int size()
     {
+      init();
       return arraySize;
     }
 
     @Override
     public int get(int index)
     {
+      init();
       return UNSAFE.getInt(arrayAddress + index * Integer.BYTES);
     }
 
