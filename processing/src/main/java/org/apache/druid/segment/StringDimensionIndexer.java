@@ -473,14 +473,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         return indexedInts;
       }
 
-      @Override
-      public IndexedInts getRow()
+      private IndexedInts getDefaultIndexedInts()
       {
-        IndexedInts ret = getRowBasic();
-        if (ret != null) {
-          return ret;
-        }
-
         // set default value
         if (hasMultipleValues) {
           indexedInts.setValues(IntArrays.EMPTY_ARRAY, 0);
@@ -499,6 +493,17 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         }
 
         return indexedInts;
+      }
+
+      @Override
+      public IndexedInts getRow()
+      {
+        IndexedInts ret = getRowBasic();
+        if (ret != null) {
+          return ret;
+        }
+
+        return getDefaultIndexedInts();
       }
 
       @Override
