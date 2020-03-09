@@ -516,15 +516,14 @@ public class SearchBenchmark
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(SearchBenchmark.class.getSimpleName()) //  + ".querySingleIncrementalIndex$"
-        .warmupIterations(1)
-        .measurementIterations(2)
+        .include(SearchBenchmark.class.getSimpleName() + ".querySingleIncrementalIndex$")
+        .warmupIterations(5)
+        .measurementIterations(10)
         // .measurementTime(TimeValue.NONE)
         .forks(0)
         .threads(1)
-        .param("indexType", "onheap")
-        .param("rowsPerSegment", "5000")
-        .param("numSegments", "2")
+        .param("indexType", "oak")
+        .param("rowsPerSegment", "1000000")
         .build();
 
     new Runner(opt).run();

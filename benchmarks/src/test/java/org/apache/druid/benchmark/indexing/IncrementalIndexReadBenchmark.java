@@ -121,9 +121,9 @@ public class IncrementalIndexReadBenchmark
 
     for (int j = 0; j < rowsPerSegment; j++) {
       InputRow row = gen.nextRow();
-      if (j % 10000 == 0) {
-        log.info(j + " rows generated.");
-      }
+      // if (j % 10000 == 0) {
+      //   log.info(j + " rows generated.");
+      // }
       incIndex.add(row);
     }
 
@@ -229,15 +229,15 @@ public class IncrementalIndexReadBenchmark
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(IncrementalIndexReadBenchmark.class.getSimpleName() + ".read$")
+        .include(IncrementalIndexReadBenchmark.class.getSimpleName() + ".readWithFilters")
         .warmupIterations(3)
         .measurementIterations(10)
         // .measurementTime(TimeValue.NONE)
         .forks(0)
         .threads(1)
-        .param("indexType", "oak")
-        .param("rollup", "false")
-        // .param("rowsPerSegment", "2000000")
+        .param("indexType", "onheap")
+        .param("rollup", "true")
+        .param("rowsPerSegment", "1000000")
         .build();
 
     new Runner(opt).run();
