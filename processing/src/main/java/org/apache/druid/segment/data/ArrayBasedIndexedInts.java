@@ -59,14 +59,6 @@ public final class ArrayBasedIndexedInts implements IndexedInts
     this.size = size;
   }
 
-  public void setAndEnsureSize(int size)
-  {
-    if (expansion.length < size) {
-      expansion = new int[size];
-    }
-    this.size = size;
-  }
-
   /**
    * Sets the values from the given array. The given values array is not reused and not prone to be mutated later.
    * Instead, the values from this array are copied into an array which is internal to ArrayBasedIndexedInts.
@@ -79,11 +71,6 @@ public final class ArrayBasedIndexedInts implements IndexedInts
     ensureSize(size);
     System.arraycopy(values, 0, expansion, 0, size);
     this.size = size;
-  }
-
-  public int[] getValues()
-  {
-    return this.expansion;
   }
 
   public void setValue(int index, int value)
