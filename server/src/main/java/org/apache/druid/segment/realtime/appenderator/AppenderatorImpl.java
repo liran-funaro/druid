@@ -403,11 +403,11 @@ public class AppenderatorImpl implements Appenderator
           identifier.getShardSpec(),
           storeCompactionState ? new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap) : null,
           identifier.getVersion(),
+          incrementalIndexImpl,
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
           tuningConfig.isReportParseExceptions(),
-          null,
-          incrementalIndexImpl
+          null
       );
 
       try {
@@ -1123,12 +1123,12 @@ public class AppenderatorImpl implements Appenderator
             identifier.getShardSpec(),
             null,
             identifier.getVersion(),
+            "onheap",
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
             tuningConfig.isReportParseExceptions(),
             null,
-            hydrants,
-            "onheap"
+            hydrants
         );
         rowsSoFar += currSink.getNumRows();
         sinks.put(identifier, currSink);

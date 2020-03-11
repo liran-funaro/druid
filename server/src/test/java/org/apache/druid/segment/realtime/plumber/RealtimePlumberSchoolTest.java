@@ -276,11 +276,11 @@ public class RealtimePlumberSchoolTest
         schema,
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        "onheap",
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn(),
-        "onheap"
+        tuningConfig.getDedupColumn()
     );
     plumber.getSinks().put(0L, sink);
     Assert.assertNull(plumber.startJob());
@@ -323,11 +323,11 @@ public class RealtimePlumberSchoolTest
         schema,
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        "onheap",
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn(),
-        "onheap"
+        tuningConfig.getDedupColumn()
     );
     plumber.getSinks().put(0L, sink);
     plumber.startJob();
@@ -375,11 +375,11 @@ public class RealtimePlumberSchoolTest
         schema2,
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        "onheap",
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn(),
-        "onheap"
+        tuningConfig.getDedupColumn()
     );
     plumber2.getSinks().put(0L, sink);
     Assert.assertNull(plumber2.startJob());

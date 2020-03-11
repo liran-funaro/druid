@@ -262,11 +262,11 @@ public class RealtimePlumber implements Plumber
           schema,
           config.getShardSpec(),
           versioningPolicy.getVersion(sinkInterval),
+          incrementalIndexImpl,
           config.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
           config.isReportParseExceptions(),
-          config.getDedupColumn(),
-          incrementalIndexImpl
+          config.getDedupColumn()
       );
       addSink(retVal);
 
@@ -728,12 +728,12 @@ public class RealtimePlumber implements Plumber
           config.getShardSpec(),
           null,
           versioningPolicy.getVersion(sinkInterval),
+          incrementalIndexImpl,
           config.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
           config.isReportParseExceptions(),
           config.getDedupColumn(),
-          hydrants,
-          incrementalIndexImpl
+          hydrants
       );
       addSink(currSink);
     }

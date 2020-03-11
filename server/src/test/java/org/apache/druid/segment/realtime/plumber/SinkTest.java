@@ -90,11 +90,11 @@ public class SinkTest
         schema,
         tuningConfig.getShardSpec(),
         version,
+        "onheap",
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn(),
-        "onheap"
+        tuningConfig.getDedupColumn()
     );
 
     sink.add(
@@ -246,11 +246,11 @@ public class SinkTest
         schema,
         tuningConfig.getShardSpec(),
         version,
+        "onheap",
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn(),
-        "onheap"
+        tuningConfig.getDedupColumn()
     );
 
     int rows = sink.add(new MapBasedInputRow(
