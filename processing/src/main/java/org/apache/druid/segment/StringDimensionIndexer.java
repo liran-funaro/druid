@@ -475,7 +475,6 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
       private IndexedInts getDefaultIndexedInts()
       {
-        // set default value
         if (hasMultipleValues) {
           indexedInts.setValues(IntArrays.EMPTY_ARRAY, 0);
         } else {
@@ -646,7 +645,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
           return null;
         }
 
-        return convertUnsortedEncodedKeyComponentToActualList((int[]) key.getDim(dimIndex));
+        return convertUnsortedEncodedKeyComponentToActualList((int[]) dim);
       }
 
       @SuppressWarnings("deprecation")

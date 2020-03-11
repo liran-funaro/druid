@@ -101,9 +101,8 @@ public class IncrementalIndexAdapter implements IndexableAdapter
         final int dimIndex = dimension.getIndex();
         DimensionAccessor accessor = accessors.get(dimension.getName());
 
-        // No need to check "dimIndex >= row.getDimsLength()" because getDim()
+        // No need to check "dimIndex >= row.getDimsLength()" because isDimNull()
         // verefies that and returns null in that case.
-        // final Object rowDim = row.getDim(dimIndex);
 
         // Add 'null' to the dimension's dictionary.
         if (row.isDimNull(dimIndex)) {

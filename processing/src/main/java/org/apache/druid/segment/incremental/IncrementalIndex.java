@@ -1066,8 +1066,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           incrementalIndexRow -> {
             final int rowOffset = incrementalIndexRow.getRowIndex();
 
+            int dimLength = incrementalIndexRow.getDimsLength();
+
             Map<String, Object> theVals = Maps.newLinkedHashMap();
-            for (int i = 0; i < incrementalIndexRow.getDimsLength(); ++i) {
+            for (int i = 0; i < dimLength; ++i) {
               Object dim = incrementalIndexRow.getDim(i);
               DimensionDesc dimensionDesc = dimensions.get(i);
               if (dimensionDesc == null) {
