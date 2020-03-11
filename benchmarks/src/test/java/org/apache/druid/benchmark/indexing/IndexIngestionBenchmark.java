@@ -67,7 +67,7 @@ public class IndexIngestionBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"1000"})
+  @Param({"0", "1000", "10000"})
   private int rollupOpportunity;
 
   @Param({"onheap", "oak"})
@@ -102,9 +102,9 @@ public class IndexIngestionBenchmark
 
     for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = gen.nextRow();
-      // if (i % 10000 == 0) {
-      //   log.info(i + " rows generated.");
-      // }
+      if (i % 10000 == 0) {
+        log.info(i + " rows generated.");
+      }
       rows.add(row);
     }
   }

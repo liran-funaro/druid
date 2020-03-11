@@ -142,9 +142,9 @@ public class IndexMergeBenchmark
 
       for (int j = 0; j < rowsPerSegment; j++) {
         InputRow row = gen.nextRow();
-        // if (j % 10000 == 0) {
-        //   log.info(j + " rows generated.");
-        // }
+        if (j % 10000 == 0) {
+          log.info(j + " rows generated.");
+        }
         incIndex.add(row);
       }
 
@@ -165,7 +165,6 @@ public class IndexMergeBenchmark
     mergeTmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
     mergeTmpFile.delete();
     mergeTmpFile.mkdirs();
-    // log.info(mergeTmpFile.getAbsolutePath() + " isFile: " + mergeTmpFile.isFile() + " isDir:" + mergeTmpFile.isDirectory());
   }
 
   @TearDown
@@ -176,28 +175,9 @@ public class IndexMergeBenchmark
     }
   }
 
-  static long folderSize(File fileOrDir)
-  {
-    if (fileOrDir.isFile()) {
-      return fileOrDir.length();
-    }
-
-    File[] files = fileOrDir.listFiles();
-    if (files == null) {
-      return 0;
-    }
-
-    long length = 0;
-    for (File file : files) {
-      length += folderSize(file);
-    }
-    return length;
-  }
-
   @TearDown(Level.Invocation)
   public void tearDown2()
   {
-    log.info("Merge size: %s", folderSize(mergeTmpFile));
     mergeTmpFile.delete();
   }
 

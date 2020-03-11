@@ -91,7 +91,7 @@ public class IndexPersistBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"1000"})
+  @Param({"0", "1000", "10000"})
   private int rollupOpportunity;
 
   @Param({"onheap", "oak"})
@@ -139,7 +139,6 @@ public class IndexPersistBenchmark
     }
 
     tmpDir = FileUtils.createTempDir();
-    // log.info("Using temp dir: " + tmpDir.getAbsolutePath());
   }
 
   @TearDown(Level.Invocation)

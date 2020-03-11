@@ -121,9 +121,9 @@ public class IncrementalIndexReadBenchmark
 
     for (int j = 0; j < rowsPerSegment; j++) {
       InputRow row = gen.nextRow();
-      // if (j % 10000 == 0) {
-      //   log.info(j + " rows generated.");
-      // }
+      if (j % 10000 == 0) {
+        log.info(j + " rows generated.");
+      }
       incIndex.add(row);
     }
 
@@ -212,7 +212,7 @@ public class IncrementalIndexReadBenchmark
   private Sequence<Cursor> makeCursors(IncrementalIndexStorageAdapter sa, DimFilter filter)
   {
     return sa.makeCursors(
-        filter == null ? null : filter.toFilter(),
+        filter.toFilter(),
         schemaInfo.getDataInterval(),
         VirtualColumns.EMPTY,
         Granularities.ALL,

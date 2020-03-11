@@ -144,7 +144,7 @@ public class GroupByBenchmark
   @Param({"all", "day"})
   private String queryGranularity;
 
-  @Param({"true", "false"})
+  @Param({"force", "false"})
   private String vectorize;
 
   private static final Logger log = new Logger(GroupByBenchmark.class);

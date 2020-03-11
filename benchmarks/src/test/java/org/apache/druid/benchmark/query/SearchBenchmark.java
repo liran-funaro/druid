@@ -357,9 +357,9 @@ public class SearchBenchmark
 
       for (int j = 0; j < global.rowsPerSegment; j++) {
         InputRow row = gen.nextRow();
-        // if (j % 10000 == 0) {
-        //   log.info(j + " rows generated.");
-        // }
+        if (j % 10000 == 0) {
+          log.info(j + " rows generated.");
+        }
         incIndex.add(row);
       }
     }

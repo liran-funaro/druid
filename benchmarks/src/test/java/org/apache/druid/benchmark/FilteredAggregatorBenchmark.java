@@ -127,7 +127,6 @@ public class FilteredAggregatorBenchmark
   public static final ObjectMapper JSON_MAPPER;
 
   private AggregatorFactory[] filteredMetrics;
-  private File indexFile;
   private DimFilter filter;
   private QueryRunnerFactory factory;
   private BenchmarkSchemaInfo schemaInfo;
