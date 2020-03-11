@@ -37,7 +37,7 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
   private final ObjectMapper objectMapper;
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
-  private final String incrementalIndexImpl;
+  private final String incrementalIndexType;
 
   @JsonCreator
   public DefaultOfflineAppenderatorFactory(
@@ -45,14 +45,14 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
       @JacksonInject ObjectMapper objectMapper,
       @JacksonInject IndexIO indexIO,
       @JacksonInject IndexMerger indexMerger,
-      @JacksonInject @Named("incrementalIndexImpl") String incrementalIndexImpl
+      @JacksonInject @Named("incrementalIndexType") String incrementalIndexType
   )
   {
     this.dataSegmentPusher = dataSegmentPusher;
     this.objectMapper = objectMapper;
     this.indexIO = indexIO;
     this.indexMerger = indexMerger;
-    this.incrementalIndexImpl = incrementalIndexImpl;
+    this.incrementalIndexType = incrementalIndexType;
   }
 
   @Override
@@ -68,7 +68,7 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
         objectMapper,
         indexIO,
         indexMerger,
-        incrementalIndexImpl
+        incrementalIndexType
     );
   }
 }

@@ -56,7 +56,7 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
-  private final String incrementalIndexImpl;
+  private final String incrementalIndexType;
 
   public DefaultRealtimeAppenderatorFactory(
       @JacksonInject ServiceEmitter emitter,
@@ -71,7 +71,7 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
       @JacksonInject Cache cache,
       @JacksonInject CacheConfig cacheConfig,
       @JacksonInject CachePopulatorStats cachePopulatorStats,
-      @JacksonInject @Named("incrementalIndexImpl") String incrementalIndexImpl
+      @JacksonInject @Named("incrementalIndexType") String incrementalIndexType
   )
   {
     this.emitter = emitter;
@@ -86,7 +86,7 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
-    this.incrementalIndexImpl = incrementalIndexImpl;
+    this.incrementalIndexType = incrementalIndexType;
   }
 
   @Override
@@ -119,7 +119,7 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
         cache,
         cacheConfig,
         cachePopulatorStats,
-        incrementalIndexImpl
+        incrementalIndexType
     );
   }
 

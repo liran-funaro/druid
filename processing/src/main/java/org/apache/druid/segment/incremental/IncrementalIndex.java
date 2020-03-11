@@ -439,16 +439,16 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return this;
     }
 
-    public IncrementalIndex build(String incrementalIndexImpl)
+    public IncrementalIndex build(String incrementalIndexType)
     {
-      return build(incrementalIndexImpl, null);
+      return build(incrementalIndexType, null);
     }
 
-    public IncrementalIndex build(String incrementalIndexImpl, final NonBlockingPool<ByteBuffer> bufferPool)
+    public IncrementalIndex build(String incrementalIndexType, final NonBlockingPool<ByteBuffer> bufferPool)
     {
-      log.info("Building incremental index of type: %s", incrementalIndexImpl);
+      log.info("Building incremental index of type: %s", incrementalIndexType);
 
-      switch (incrementalIndexImpl) {
+      switch (incrementalIndexType) {
         case "onheap":
           return buildOnheap();
         case "oak":
@@ -456,7 +456,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         case "offheap":
           return buildOffheap(bufferPool);
         default:
-          throw new IllegalArgumentException("Unsupported incremental index: " + incrementalIndexImpl);
+          throw new IllegalArgumentException("Unsupported incremental index: " + incrementalIndexType);
       }
     }
 

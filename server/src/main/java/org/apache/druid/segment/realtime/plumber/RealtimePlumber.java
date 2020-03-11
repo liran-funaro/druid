@@ -130,7 +130,7 @@ public class RealtimePlumber implements Plumber
 
   private static final String COMMIT_METADATA_KEY = "%commitMetadata%";
   private static final String COMMIT_METADATA_TIMESTAMP_KEY = "%commitMetadataTimestamp%";
-  private final String incrementalIndexImpl;
+  private final String incrementalIndexType;
 
   public RealtimePlumber(
       DataSchema schema,
@@ -150,7 +150,7 @@ public class RealtimePlumber implements Plumber
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       ObjectMapper objectMapper,
-      String incrementalIndexImpl
+      String incrementalIndexType
   )
   {
     this.schema = schema;
@@ -176,7 +176,7 @@ public class RealtimePlumber implements Plumber
         cacheConfig,
         cachePopulatorStats
     );
-    this.incrementalIndexImpl = incrementalIndexImpl;
+    this.incrementalIndexType = incrementalIndexType;
 
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
@@ -262,7 +262,7 @@ public class RealtimePlumber implements Plumber
           schema,
           config.getShardSpec(),
           versioningPolicy.getVersion(sinkInterval),
-          incrementalIndexImpl,
+          incrementalIndexType,
           config.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
           config.isReportParseExceptions(),
@@ -728,7 +728,7 @@ public class RealtimePlumber implements Plumber
           config.getShardSpec(),
           null,
           versioningPolicy.getVersion(sinkInterval),
-          incrementalIndexImpl,
+          incrementalIndexType,
           config.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
           config.isReportParseExceptions(),

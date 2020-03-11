@@ -89,7 +89,7 @@ public class TaskToolboxFactory
   private final DataNodeService dataNodeService;
   private final TaskReportFileWriter taskReportFileWriter;
   private final IntermediaryDataManager intermediaryDataManager;
-  private final String incrementalIndexImpl;
+  private final String incrementalIndexType;
 
   @Inject
   public TaskToolboxFactory(
@@ -121,7 +121,7 @@ public class TaskToolboxFactory
       DataNodeService dataNodeService,
       TaskReportFileWriter taskReportFileWriter,
       IntermediaryDataManager intermediaryDataManager,
-      @Named("incrementalIndexImpl") String incrementalIndexImpl
+      @Named("incrementalIndexType") String incrementalIndexType
   )
   {
     this.config = config;
@@ -152,7 +152,7 @@ public class TaskToolboxFactory
     this.dataNodeService = dataNodeService;
     this.taskReportFileWriter = taskReportFileWriter;
     this.intermediaryDataManager = intermediaryDataManager;
-    this.incrementalIndexImpl = incrementalIndexImpl;
+    this.incrementalIndexType = incrementalIndexType;
   }
 
   public TaskToolbox build(Task task)
@@ -188,7 +188,7 @@ public class TaskToolboxFactory
         dataNodeService,
         taskReportFileWriter,
         intermediaryDataManager,
-        incrementalIndexImpl
+        incrementalIndexType
     );
   }
 }

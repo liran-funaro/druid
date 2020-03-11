@@ -78,7 +78,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
       @JacksonInject CacheConfig cacheConfig,
       @JacksonInject CachePopulatorStats cachePopulatorStats,
       @JacksonInject ObjectMapper objectMapper,
-      @JacksonInject @Named("incrementalIndexImpl") String incrementalIndexImpl
+      @JacksonInject @Named("incrementalIndexType") String incrementalIndexType
   )
   {
     super(
@@ -96,7 +96,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         cacheConfig,
         cachePopulatorStats,
         objectMapper,
-        incrementalIndexImpl
+        incrementalIndexType
     );
 
     this.flushDuration = flushDuration == null ? DEFAULT_FLUSH_DURATION : flushDuration;

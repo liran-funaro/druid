@@ -61,7 +61,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
   private final ObjectMapper objectMapper;
-  private final String incrementalIndexImpl;
+  private final String incrementalIndexType;
 
   @JsonCreator
   public RealtimePlumberSchool(
@@ -79,7 +79,7 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject CacheConfig cacheConfig,
       @JacksonInject CachePopulatorStats cachePopulatorStats,
       @JacksonInject ObjectMapper objectMapper,
-      @JacksonInject @Named("incrementalIndexImpl") String incrementalIndexImpl
+      @JacksonInject @Named("incrementalIndexType") String incrementalIndexType
   )
   {
     this.emitter = emitter;
@@ -97,7 +97,7 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
     this.objectMapper = objectMapper;
-    this.incrementalIndexImpl = incrementalIndexImpl;
+    this.incrementalIndexType = incrementalIndexType;
   }
 
   @Override
@@ -127,7 +127,7 @@ public class RealtimePlumberSchool implements PlumberSchool
         cacheConfig,
         cachePopulatorStats,
         objectMapper,
-        incrementalIndexImpl
+        incrementalIndexType
     );
   }
 

@@ -79,7 +79,7 @@ public interface AppenderatorsManager
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
-      String incrementalIndexImpl
+      String incrementalIndexType
   );
 
   /**
@@ -95,7 +95,7 @@ public interface AppenderatorsManager
       ObjectMapper objectMapper,
       IndexIO indexIO,
       IndexMerger indexMerger,
-      String incrementalIndexImpl
+      String incrementalIndexType
   );
 
   /**

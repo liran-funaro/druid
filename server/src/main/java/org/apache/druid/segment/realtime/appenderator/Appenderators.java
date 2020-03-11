@@ -57,7 +57,7 @@ public class Appenderators
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
-      String incrementalIndexImpl
+      String incrementalIndexType
   )
   {
     return new AppenderatorImpl(
@@ -86,7 +86,7 @@ public class Appenderators
         indexIO,
         indexMerger,
         cache,
-        incrementalIndexImpl
+        incrementalIndexType
     );
   }
 
@@ -100,7 +100,7 @@ public class Appenderators
       ObjectMapper objectMapper,
       IndexIO indexIO,
       IndexMerger indexMerger,
-      String incrementalIndexImpl
+      String incrementalIndexType
   )
   {
     return new AppenderatorImpl(
@@ -141,7 +141,7 @@ public class Appenderators
         indexIO,
         indexMerger,
         null,
-        incrementalIndexImpl
+        incrementalIndexType
     );
   }
 }
