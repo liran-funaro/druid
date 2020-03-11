@@ -119,8 +119,8 @@ public class FireDepartmentTest
                 MapCache.create(0),
                 NO_CACHE_CONFIG,
                 new CachePopulatorStats(),
-                TestHelper.makeJsonMapper(),
-                "onheap"
+                TestHelper.makeJsonMapper()
+
             )
         ),
         RealtimeTuningConfig.makeDefaultTuningConfig(new File("/tmp/nonexistent"))

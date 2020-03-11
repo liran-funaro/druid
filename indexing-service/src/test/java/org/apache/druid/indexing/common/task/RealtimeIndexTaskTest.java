@@ -823,6 +823,7 @@ public class RealtimeIndexTaskTest
         null
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
+        null,
         1000,
         null,
         new Period("P1Y"),
@@ -988,8 +989,7 @@ public class RealtimeIndexTaskTest
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
         new NoopTestTaskReportFileWriter(),
-        null,
-        "onheap"
+        null
     );
 
     return toolboxFactory.build(task);

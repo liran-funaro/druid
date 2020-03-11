@@ -69,8 +69,7 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats,
-      String incrementalIndexType
+      CachePopulatorStats cachePopulatorStats
   )
   {
     throw new UOE(ERROR_MSG);
@@ -86,8 +85,7 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
-      IndexMerger indexMerger,
-      String incrementalIndexType
+      IndexMerger indexMerger
   )
   {
     throw new UOE(ERROR_MSG);

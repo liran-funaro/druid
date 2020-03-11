@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.inject.name.Named;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -61,7 +60,6 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
   private final ObjectMapper objectMapper;
-  private final String incrementalIndexType;
 
   @JsonCreator
   public RealtimePlumberSchool(
@@ -78,8 +76,7 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject Cache cache,
       @JacksonInject CacheConfig cacheConfig,
       @JacksonInject CachePopulatorStats cachePopulatorStats,
-      @JacksonInject ObjectMapper objectMapper,
-      @JacksonInject @Named("incrementalIndexType") String incrementalIndexType
+      @JacksonInject ObjectMapper objectMapper
   )
   {
     this.emitter = emitter;
@@ -97,7 +94,6 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
     this.objectMapper = objectMapper;
-    this.incrementalIndexType = incrementalIndexType;
   }
 
   @Override
@@ -126,8 +122,7 @@ public class RealtimePlumberSchool implements PlumberSchool
         cache,
         cacheConfig,
         cachePopulatorStats,
-        objectMapper,
-        incrementalIndexType
+        objectMapper
     );
   }
 

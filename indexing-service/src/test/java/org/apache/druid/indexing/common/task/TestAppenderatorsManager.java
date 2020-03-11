@@ -64,8 +64,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats,
-      String incrementalIndexType
+      CachePopulatorStats cachePopulatorStats
   )
   {
     realtimeAppenderator = Appenderators.createRealtime(
@@ -84,8 +83,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         joinableFactory,
         cache,
         cacheConfig,
-        cachePopulatorStats,
-        incrementalIndexType
+        cachePopulatorStats
     );
     return realtimeAppenderator;
   }
@@ -100,8 +98,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
-      IndexMerger indexMerger,
-      String incrementalIndexType
+      IndexMerger indexMerger
   )
   {
     return Appenderators.createOffline(
@@ -113,8 +110,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         dataSegmentPusher,
         objectMapper,
         indexIO,
-        indexMerger,
-        incrementalIndexType
+        indexMerger
     );
   }
 

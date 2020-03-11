@@ -158,8 +158,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats,
-      String incrementalIndexType
+      CachePopulatorStats cachePopulatorStats
   )
   {
     synchronized (this) {
@@ -180,8 +179,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           datasourceBundle.getWalker(),
           indexIO,
           wrapIndexMerger(indexMerger),
-          cache,
-          incrementalIndexType
+          cache
       );
 
       datasourceBundle.addAppenderator(taskId, appenderator);
@@ -199,8 +197,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
-      IndexMerger indexMerger,
-      String incrementalIndexType
+      IndexMerger indexMerger
   )
   {
     synchronized (this) {
@@ -218,8 +215,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           dataSegmentPusher,
           objectMapper,
           indexIO,
-          wrapIndexMerger(indexMerger),
-          incrementalIndexType
+          wrapIndexMerger(indexMerger)
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -377,6 +373,11 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     public boolean isReportParseExceptions()
     {
       return baseConfig.isReportParseExceptions();
+    }
+
+    @Override
+    public String getIncrementalIndexType() {
+      return baseConfig.getIncrementalIndexType();
     }
 
     @Override

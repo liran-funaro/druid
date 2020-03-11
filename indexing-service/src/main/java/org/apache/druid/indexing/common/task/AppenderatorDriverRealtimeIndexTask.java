@@ -775,8 +775,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         toolbox.getJoinableFactory(),
         toolbox.getCache(),
         toolbox.getCacheConfig(),
-        toolbox.getCachePopulatorStats(),
-        toolbox.getIncrementalIndexName()
+        toolbox.getCachePopulatorStats()
     );
   }
 

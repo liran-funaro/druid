@@ -29,7 +29,14 @@ import java.io.File;
 
 public interface AppenderatorConfig
 {
+  String DEFAULT_INCREMENTAL_INDEX_TYPE = "onheap";
+
   boolean isReportParseExceptions();
+
+  /**
+   * The inceremental index implementation to use
+   */
+  String getIncrementalIndexType();
 
   /**
    * Maximum number of rows in memory before persisting to local storage

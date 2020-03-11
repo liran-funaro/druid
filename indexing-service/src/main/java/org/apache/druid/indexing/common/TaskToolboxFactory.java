@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import com.google.inject.name.Named;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -89,7 +88,6 @@ public class TaskToolboxFactory
   private final DataNodeService dataNodeService;
   private final TaskReportFileWriter taskReportFileWriter;
   private final IntermediaryDataManager intermediaryDataManager;
-  private final String incrementalIndexType;
 
   @Inject
   public TaskToolboxFactory(
@@ -120,8 +118,7 @@ public class TaskToolboxFactory
       LookupNodeService lookupNodeService,
       DataNodeService dataNodeService,
       TaskReportFileWriter taskReportFileWriter,
-      IntermediaryDataManager intermediaryDataManager,
-      @Named("incrementalIndexType") String incrementalIndexType
+      IntermediaryDataManager intermediaryDataManager
   )
   {
     this.config = config;
@@ -152,7 +149,6 @@ public class TaskToolboxFactory
     this.dataNodeService = dataNodeService;
     this.taskReportFileWriter = taskReportFileWriter;
     this.intermediaryDataManager = intermediaryDataManager;
-    this.incrementalIndexType = incrementalIndexType;
   }
 
   public TaskToolbox build(Task task)
@@ -187,8 +183,7 @@ public class TaskToolboxFactory
         lookupNodeService,
         dataNodeService,
         taskReportFileWriter,
-        intermediaryDataManager,
-        incrementalIndexType
+        intermediaryDataManager
     );
   }
 }

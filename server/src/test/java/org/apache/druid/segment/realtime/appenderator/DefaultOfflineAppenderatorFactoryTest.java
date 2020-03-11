@@ -72,7 +72,6 @@ public class DefaultOfflineAppenderatorFactoryTest
                 binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
                 binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
                 binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-                binder.bindConstant().annotatedWith(Names.named("incrementalIndexType")).to("onheap");
                 binder.bind(DruidProcessingConfig.class).toInstance(
                     new DruidProcessingConfig()
                     {
@@ -134,6 +133,7 @@ public class DefaultOfflineAppenderatorFactoryTest
     );
 
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
+        null,
         75000,
         null,
         null,

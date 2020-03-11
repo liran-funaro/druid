@@ -135,8 +135,7 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 new NoopTestTaskReportFileWriter(),
-                null,
-                "onheap"
+                null
             ),
             taskConfig,
             location

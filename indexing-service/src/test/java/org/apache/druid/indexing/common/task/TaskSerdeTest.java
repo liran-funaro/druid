@@ -208,6 +208,7 @@ public class TaskSerdeTest
             new IndexTuningConfig(
                 null,
                 null,
+                null,
                 10,
                 null,
                 null,
@@ -290,6 +291,7 @@ public class TaskSerdeTest
             ),
             new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true),
             new IndexTuningConfig(
+                null,
                 null,
                 null,
                 10,
@@ -399,6 +401,7 @@ public class TaskSerdeTest
             ),
 
             new RealtimeTuningConfig(
+                null,
                 1,
                 10L,
                 new Period("PT10M"),

@@ -893,8 +893,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null,
         null,
         new NoopTestTaskReportFileWriter(),
-        null,
-        "onheap"
+        null
     );
   }
 

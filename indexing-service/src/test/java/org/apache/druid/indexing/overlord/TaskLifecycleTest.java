@@ -678,8 +678,7 @@ public class TaskLifecycleTest
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
         new NoopTestTaskReportFileWriter(),
-        null,
-        "onheap"
+        null
     );
   }
 
@@ -743,6 +742,7 @@ public class TaskLifecycleTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
                 null,
                 null,
@@ -827,6 +827,7 @@ public class TaskLifecycleTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
                 null,
                 null,
@@ -1256,6 +1257,7 @@ public class TaskLifecycleTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
                 null,
                 null,
@@ -1363,6 +1365,7 @@ public class TaskLifecycleTest
             new IndexTuningConfig(
                 null,
                 10000,
+                null,
                 10,
                 null,
                 null,
@@ -1477,6 +1480,7 @@ public class TaskLifecycleTest
         // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
+        null,
         1000,
         null,
         new Period("P1Y"),

@@ -109,8 +109,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         new SingleFileTaskReportFileWriter(new File("fake")),
-        null,
-        "onheap"
+        null
     );
     runner = new SingleTaskBackgroundRunner(
         toolboxFactory,

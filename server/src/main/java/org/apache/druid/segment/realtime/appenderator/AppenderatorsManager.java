@@ -78,8 +78,7 @@ public interface AppenderatorsManager
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats,
-      String incrementalIndexType
+      CachePopulatorStats cachePopulatorStats
   );
 
   /**
@@ -94,8 +93,7 @@ public interface AppenderatorsManager
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
-      IndexMerger indexMerger,
-      String incrementalIndexType
+      IndexMerger indexMerger
   );
 
   /**

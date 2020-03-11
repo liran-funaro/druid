@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.inject.name.Named;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -77,8 +76,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
       @JacksonInject Cache cache,
       @JacksonInject CacheConfig cacheConfig,
       @JacksonInject CachePopulatorStats cachePopulatorStats,
-      @JacksonInject ObjectMapper objectMapper,
-      @JacksonInject @Named("incrementalIndexType") String incrementalIndexType
+      @JacksonInject ObjectMapper objectMapper
   )
   {
     super(
@@ -95,8 +93,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         cache,
         cacheConfig,
         cachePopulatorStats,
-        objectMapper,
-        incrementalIndexType
+        objectMapper
     );
 
     this.flushDuration = flushDuration == null ? DEFAULT_FLUSH_DURATION : flushDuration;

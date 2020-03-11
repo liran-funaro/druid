@@ -75,8 +75,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats,
-      String incrementalIndexType
+      CachePopulatorStats cachePopulatorStats
   )
   {
     if (realtimeAppenderator != null) {
@@ -100,8 +99,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           joinableFactory,
           cache,
           cacheConfig,
-          cachePopulatorStats,
-          incrementalIndexType
+          cachePopulatorStats
       );
     }
     return realtimeAppenderator;
@@ -117,8 +115,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
-      IndexMerger indexMerger,
-      String incrementalIndexType
+      IndexMerger indexMerger
   )
   {
     // CompactionTask does run multiple sub-IndexTasks, so we allow multiple batch appenderators
@@ -134,8 +131,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           dataSegmentPusher,
           objectMapper,
           indexIO,
-          indexMerger,
-          incrementalIndexType
+          indexMerger
       );
       return batchAppenderator;
     }

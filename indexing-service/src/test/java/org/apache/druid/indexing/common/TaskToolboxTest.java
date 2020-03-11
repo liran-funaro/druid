@@ -124,8 +124,7 @@ public class TaskToolboxTest
         null,
         null,
         new NoopTestTaskReportFileWriter(),
-        null,
-        "onheap"
+        null
     );
   }
 
@@ -212,11 +211,5 @@ public class TaskToolboxTest
   public void testGetCacheConfig()
   {
     Assert.assertEquals(mockCacheConfig, taskToolbox.build(task).getCacheConfig());
-  }
-
-  @Test
-  public void testGetIncrementalIndexName()
-  {
-    Assert.assertEquals("onheap", taskToolbox.build(task).getIncrementalIndexName());
   }
 }

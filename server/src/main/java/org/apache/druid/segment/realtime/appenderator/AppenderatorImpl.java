@@ -150,7 +150,6 @@ public class AppenderatorImpl implements Appenderator
   private volatile FileChannel basePersistDirLockChannel = null;
 
   private volatile Throwable persistError;
-  private String incrementalIndexType;
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
@@ -173,8 +172,7 @@ public class AppenderatorImpl implements Appenderator
       @Nullable SinkQuerySegmentWalker sinkQuerySegmentWalker,
       IndexIO indexIO,
       IndexMerger indexMerger,
-      Cache cache,
-      String incrementalIndexType
+      Cache cache
   )
   {
     this.myId = id;
@@ -189,7 +187,6 @@ public class AppenderatorImpl implements Appenderator
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
     this.cache = cache;
     this.texasRanger = sinkQuerySegmentWalker;
-    this.incrementalIndexType = incrementalIndexType;
 
     if (sinkQuerySegmentWalker == null) {
       this.sinkTimeline = new VersionedIntervalTimeline<>(
@@ -403,7 +400,7 @@ public class AppenderatorImpl implements Appenderator
           identifier.getShardSpec(),
           storeCompactionState ? new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap) : null,
           identifier.getVersion(),
-          incrementalIndexType,
+          tuningConfig.getIncrementalIndexType(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
           tuningConfig.isReportParseExceptions(),
@@ -1123,7 +1120,7 @@ public class AppenderatorImpl implements Appenderator
             identifier.getShardSpec(),
             null,
             identifier.getVersion(),
-            "onheap",
+            tuningConfig.getIncrementalIndexType(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
             tuningConfig.isReportParseExceptions(),

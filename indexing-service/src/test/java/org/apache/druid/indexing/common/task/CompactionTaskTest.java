@@ -300,6 +300,7 @@ public class CompactionTaskTest
     return new ParallelIndexTuningConfig(
         null,
         null, // null to compute maxRowsPerSegment automatically
+        null,
         500000,
         1000000L,
         null,
@@ -454,6 +455,7 @@ public class CompactionTaskTest
         new IndexTuningConfig(
             null,
             null, // null to compute maxRowsPerSegment automatically
+            null,
             500000,
             1000000L,
             null,
@@ -606,6 +608,7 @@ public class CompactionTaskTest
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
         100000,
         null,
+        null,
         500000,
         1000000L,
         null,
@@ -673,6 +676,7 @@ public class CompactionTaskTest
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
         null,
         null,
+        null,
         500000,
         1000000L,
         1000000L,
@@ -738,6 +742,7 @@ public class CompactionTaskTest
   public void testCreateIngestionSchemaWithNumShards() throws IOException, SegmentLoadingException
   {
     final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+        null,
         null,
         null,
         500000,
@@ -1135,6 +1140,7 @@ public class CompactionTaskTest
         new ParallelIndexTuningConfig(
             null,
             null,
+            null,
             500000,
             1000000L,
             Long.MAX_VALUE,
@@ -1294,8 +1300,7 @@ public class CompactionTaskTest
           null,
           null,
           new NoopTestTaskReportFileWriter(),
-          null,
-          "onheap"
+          null
       );
       this.segmentFileMap = segmentFileMap;
     }

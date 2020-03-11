@@ -148,6 +148,7 @@ public class AppenderatorTester implements AutoCloseable
     );
     maxSizeInBytes = maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes;
     tuningConfig = new RealtimeTuningConfig(
+        null,
         maxRowsInMemory,
         maxSizeInBytes,
         null,
@@ -285,8 +286,7 @@ public class AppenderatorTester implements AutoCloseable
         NoopJoinableFactory.INSTANCE,
         MapCache.create(2048),
         new CacheConfig(),
-        new CachePopulatorStats(),
-        "onheap"
+        new CachePopulatorStats()
     );
   }
 

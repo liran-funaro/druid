@@ -21,7 +21,6 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.name.Named;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -56,7 +55,6 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
-  private final String incrementalIndexType;
 
   public DefaultRealtimeAppenderatorFactory(
       @JacksonInject ServiceEmitter emitter,
@@ -70,8 +68,7 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
       @JacksonInject IndexMerger indexMerger,
       @JacksonInject Cache cache,
       @JacksonInject CacheConfig cacheConfig,
-      @JacksonInject CachePopulatorStats cachePopulatorStats,
-      @JacksonInject @Named("incrementalIndexType") String incrementalIndexType
+      @JacksonInject CachePopulatorStats cachePopulatorStats
   )
   {
     this.emitter = emitter;
@@ -86,7 +83,6 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
-    this.incrementalIndexType = incrementalIndexType;
   }
 
   @Override
@@ -118,8 +114,7 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
         joinableFactory,
         cache,
         cacheConfig,
-        cachePopulatorStats,
-        incrementalIndexType
+        cachePopulatorStats
     );
   }
 

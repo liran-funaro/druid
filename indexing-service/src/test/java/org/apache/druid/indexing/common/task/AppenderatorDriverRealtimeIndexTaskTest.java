@@ -1400,6 +1400,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         null
     );
     RealtimeAppenderatorTuningConfig tuningConfig = new RealtimeAppenderatorTuningConfig(
+        null,
         1000,
         null,
         maxRowsPerSegment,
@@ -1606,8 +1607,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
         new SingleFileTaskReportFileWriter(reportsFile),
-        null,
-        "onheap"
+        null
     );
   }
 

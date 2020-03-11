@@ -1209,6 +1209,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;
     private static final long DEFAULT_PUSH_TIMEOUT = 0;
 
+    private final String incrementalIndexType;
     private final int maxRowsInMemory;
     private final long maxBytesInMemory;
 
@@ -1280,6 +1281,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public IndexTuningConfig(
         @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
         @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
+        @JsonProperty("incrementalIndexType") @Nullable String incrementalIndexType,
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
         @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
@@ -1302,6 +1304,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     )
     {
       this(
+          incrementalIndexType,
           maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
           maxBytesInMemory != null ? maxBytesInMemory : 0,
           getDefaultPartitionsSpec(
@@ -1333,10 +1336,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
+        @Nullable String incrementalIndexType,
         @Nullable Integer maxRowsInMemory,
         @Nullable Long maxBytesInMemory,
         @Nullable PartitionsSpec partitionsSpec,
@@ -1353,6 +1357,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @Nullable Integer maxSavedParseExceptions
     )
     {
+      this.incrementalIndexType = incrementalIndexType == null ? DEFAULT_INCREMENTAL_INDEX_TYPE : incrementalIndexType;
       this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
       // initializing this to 0, it will be lazily initialized to a value
       // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
@@ -1391,6 +1396,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public IndexTuningConfig withBasePersistDirectory(File dir)
     {
       return new IndexTuningConfig(
+          incrementalIndexType,
           maxRowsInMemory,
           maxBytesInMemory,
           partitionsSpec,
@@ -1411,6 +1417,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public IndexTuningConfig withPartitionsSpec(PartitionsSpec partitionsSpec)
     {
       return new IndexTuningConfig(
+          incrementalIndexType,
           maxRowsInMemory,
           maxBytesInMemory,
           partitionsSpec,
@@ -1426,6 +1433,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxParseExceptions,
           maxSavedParseExceptions
       );
+    }
+
+    @Override
+    @JsonProperty
+    public String getIncrementalIndexType() {
+      return incrementalIndexType;
     }
 
     @JsonProperty

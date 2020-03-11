@@ -2676,6 +2676,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     boolean resetOffsetAutomatically = false;
     int maxRowsInMemory = 1000;
     final KinesisIndexTaskTuningConfig tuningConfig = new KinesisIndexTaskTuningConfig(
+        null,
         maxRowsInMemory,
         null,
         maxRowsPerSegment,
@@ -2908,8 +2909,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
         new SingleFileTaskReportFileWriter(reportsFile),
-        null,
-        "onheap"
+        null
     );
   }
 
