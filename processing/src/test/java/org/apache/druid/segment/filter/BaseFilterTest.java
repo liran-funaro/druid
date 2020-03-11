@@ -65,7 +65,9 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ValueType;
@@ -154,7 +156,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       @Nullable String timeDim,
       @Nullable Double d0,
       @Nullable Float f0,
-      @Nullable Long l0)
+      @Nullable Long l0
+  )
   {
     // for row selector to work correctly as part of the test matrix, default value coercion needs to happen to columns
     Map<String, Object> mapRow = Maps.newHashMapWithExpectedSize(6);
@@ -261,23 +264,38 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         "off-heap memory segment write-out medium", OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
 
-    final Map<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finishers = ImmutableMap.of(
-        "incremental",
-        input -> {
-          final IncrementalIndex index = input.buildIncrementalIndex();
-          return Pair.of(new IncrementalIndexStorageAdapter(index), index);
-        },
-        "mmapped",
-        input -> {
-          final QueryableIndex index = input.buildMMappedIndex();
-          return Pair.of(new QueryableIndexStorageAdapter(index), index);
-        },
-        "mmappedMerged",
-        input -> {
-          final QueryableIndex index = input.buildMMappedMergedIndex();
-          return Pair.of(new QueryableIndexStorageAdapter(index), index);
-        }
-    );
+    final Map<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finishers =
+        ImmutableMap.<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>>builder()
+            .put(
+                "incremental",
+                input -> {
+                  final IncrementalIndex index = input.buildIncrementalIndex();
+                  return Pair.of(new IncrementalIndexStorageAdapter(index), index);
+                }
+            )
+            .put(
+                "mmapped",
+                input -> {
+                  final QueryableIndex index = input.buildMMappedIndex();
+                  return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                }
+            )
+            .put(
+                "mmappedMerged",
+                input -> {
+                  final QueryableIndex index = input.buildMMappedMergedIndex();
+                  return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                }
+            )
+            .put(
+                "rowBasedWithoutTypeSignature",
+                input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asStorageAdapter(), () -> {})
+            )
+            .put(
+                "rowBasedWithTypeSignature",
+                input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {})
+            )
+            .build();
 
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
       for (Map.Entry<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactoryEntry :
@@ -638,7 +656,14 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     // Perform test
     final SettableSupplier<InputRow> rowSupplier = new SettableSupplier<>();
     final ValueMatcher matcher = makeFilter(filter).makeMatcher(
-        VIRTUAL_COLUMNS.wrap(RowBasedColumnSelectorFactory.create(rowSupplier::get, rowSignature))
+        VIRTUAL_COLUMNS.wrap(
+            RowBasedColumnSelectorFactory.create(
+                RowAdapters.standardRow(),
+                rowSupplier::get,
+                rowSignature,
+                false
+            )
+        )
     );
     final List<String> values = new ArrayList<>();
     for (InputRow row : rows) {
@@ -655,8 +680,9 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final List<String> expectedRows
   )
   {
-    // IncrementalIndex cannot ever vectorize.
-    final boolean testVectorized = !(adapter instanceof IncrementalIndexStorageAdapter);
+    // IncrementalIndex and RowBasedSegment cannot ever vectorize.
+    final boolean testVectorized =
+        !(adapter instanceof IncrementalIndexStorageAdapter) && !(adapter instanceof RowBasedStorageAdapter);
     assertFilterMatches(filter, expectedRows, testVectorized);
   }
 
