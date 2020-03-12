@@ -376,7 +376,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     }
 
     @Override
-    public String getIncrementalIndexType() {
+    public String getIncrementalIndexType()
+    {
       return baseConfig.getIncrementalIndexType();
     }
 

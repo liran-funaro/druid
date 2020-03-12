@@ -1437,7 +1437,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     @Override
     @JsonProperty
-    public String getIncrementalIndexType() {
+    public String getIncrementalIndexType()
+    {
       return incrementalIndexType;
     }
 
