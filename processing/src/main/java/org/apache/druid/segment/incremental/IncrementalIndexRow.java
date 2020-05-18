@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.DimensionIndexer;
+import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Array;
@@ -30,7 +31,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public final class IncrementalIndexRow
+public class IncrementalIndexRow
 {
   public static final int EMPTY_ROW_INDEX = -1;
 
@@ -97,9 +98,29 @@ public final class IncrementalIndexRow
     return timestamp;
   }
 
-  public Object[] getDims()
+  @Nullable
+  public Object getDim(int index)
   {
-    return dims;
+    if (index >= dims.length) {
+      return null;
+    }
+    return dims[index];
+  }
+
+  public int getDimsLength()
+  {
+    return dims.length;
+  }
+
+  public boolean isDimNull(int index)
+  {
+    return (index >= dims.length) || (dims[index] == null);
+  }
+
+  @Nullable
+  public IndexedInts getStringDim(final int dimIndex)
+  {
+    return null;
   }
 
   public int getRowIndex()
