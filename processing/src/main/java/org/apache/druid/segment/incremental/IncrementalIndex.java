@@ -32,6 +32,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.collections.NonBlockingPool;
+import org.apache.druid.collections.StupidPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.InputRow;
@@ -45,6 +46,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -241,13 +243,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final AggregatorFactory[] metrics;
   private final AggregatorType[] aggs;
   private final boolean deserializeComplexMetrics;
-  private final boolean reportParseExceptions; // only used by OffHeapIncrementalIndex
+  protected final boolean reportParseExceptions; // only used by OffHeapIncrementalIndex and OakIncrementalIndex
   private final Metadata metadata;
 
   private final Map<String, MetricDesc> metricDescs;
 
   private final Map<String, DimensionDesc> dimensionDescs;
-  private final List<DimensionDesc> dimensionDescsList;
+  protected final List<DimensionDesc> dimensionDescsList;
   // dimension capabilities are provided by the indexers
   private final Map<String, ColumnCapabilities> timeAndMetricsColumnCapabilities;
   private final AtomicInteger numEntries = new AtomicInteger();
@@ -353,6 +355,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     private int maxRowCount;
     private long maxBytesInMemory;
 
+    private static final Logger log = new Logger(IncrementalIndex.class);
+
     public Builder()
     {
       incrementalIndexSchema = null;
@@ -440,6 +444,27 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return this;
     }
 
+    public IncrementalIndex build(String incrementalIndexType)
+    {
+      return build(incrementalIndexType, null);
+    }
+
+    public IncrementalIndex build(String incrementalIndexType, @Nullable final NonBlockingPool<ByteBuffer> bufferPool)
+    {
+      log.info("Building incremental index of type: %s", incrementalIndexType);
+
+      switch (incrementalIndexType) {
+        case "onheap":
+          return buildOnheap();
+        case "offheap":
+          return buildOffheap(bufferPool);
+        case "oak":
+          return buildOak();
+        default:
+          throw new IllegalArgumentException("Unsupported incremental index: " + incrementalIndexType);
+      }
+    }
+
     public OnheapIncrementalIndex buildOnheap()
     {
       if (maxRowCount <= 0) {
@@ -457,10 +482,17 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       );
     }
 
-    public IncrementalIndex buildOffheap(final NonBlockingPool<ByteBuffer> bufferPool)
+    public IncrementalIndex buildOffheap(NonBlockingPool<ByteBuffer> bufferPool)
     {
       if (maxRowCount <= 0) {
         throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
+      }
+
+      if (bufferPool == null) {
+        bufferPool = new StupidPool<>(
+            "OffheapIncrementalIndex-bufferPool",
+            () -> ByteBuffer.allocate(256 * 1024)
+        );
       }
 
       return new OffheapIncrementalIndex(
@@ -471,6 +503,22 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           sortFacts,
           maxRowCount,
           Objects.requireNonNull(bufferPool, "bufferPool is null")
+      );
+    }
+
+    public IncrementalIndex buildOak()
+    {
+      if (maxRowCount <= 0) {
+        throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
+      }
+
+      return new OakIncrementalIndex(
+          Objects.requireNonNull(incrementalIndexSchema, "incrementalIndexSchema is null"),
+          deserializeComplexMetrics,
+          reportParseExceptions,
+          concurrentEventAdd,
+          maxRowCount,
+          maxBytesInMemory
       );
     }
   }
@@ -504,15 +552,15 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   protected abstract Object getAggVal(AggregatorType agg, int rowOffset, int aggPosition);
 
-  protected abstract float getMetricFloatValue(int rowOffset, int aggOffset);
+  protected abstract float getMetricFloatValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract long getMetricLongValue(int rowOffset, int aggOffset);
+  protected abstract long getMetricLongValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract Object getMetricObjectValue(int rowOffset, int aggOffset);
+  protected abstract Object getMetricObjectValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract double getMetricDoubleValue(int rowOffset, int aggOffset);
+  protected abstract double getMetricDoubleValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract boolean isNull(int rowOffset, int aggOffset);
+  protected abstract boolean isNull(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
   static class IncrementalIndexRowResult
   {
@@ -1040,11 +1088,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           incrementalIndexRow -> {
             final int rowOffset = incrementalIndexRow.getRowIndex();
 
-            Object[] theDims = incrementalIndexRow.getDims();
+            int dimLength = incrementalIndexRow.getDimsLength();
 
             Map<String, Object> theVals = Maps.newLinkedHashMap();
-            for (int i = 0; i < theDims.length; ++i) {
-              Object dim = theDims[i];
+            for (int i = 0; i < dimLength; ++i) {
+              Object dim = incrementalIndexRow.getDim(i);
               DimensionDesc dimensionDesc = dimensions.get(i);
               if (dimensionDesc == null) {
                 continue;
@@ -1523,7 +1571,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public long getLong()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      return getMetricLongValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricLongValue(currEntry.get(), metricIndex);
     }
 
     @Override
@@ -1535,7 +1583,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public boolean isNull()
     {
-      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
+      return IncrementalIndex.this.isNull(currEntry.get(), metricIndex);
     }
   }
 
@@ -1560,7 +1608,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public Object getObject()
     {
-      return getMetricObjectValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricObjectValue(currEntry.get(), metricIndex);
     }
 
     @Override
@@ -1591,7 +1639,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public float getFloat()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      return getMetricFloatValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricFloatValue(currEntry.get(), metricIndex);
     }
 
     @Override
@@ -1603,7 +1651,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public boolean isNull()
     {
-      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
+      return IncrementalIndex.this.isNull(currEntry.get(), metricIndex);
     }
   }
 
@@ -1622,13 +1670,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public double getDouble()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      return getMetricDoubleValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricDoubleValue(currEntry.get(), metricIndex);
     }
 
     @Override
     public boolean isNull()
     {
-      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
+      return IncrementalIndex.this.isNull(currEntry.get(), metricIndex);
     }
 
     @Override

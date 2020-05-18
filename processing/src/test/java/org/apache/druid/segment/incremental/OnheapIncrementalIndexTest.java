@@ -91,7 +91,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       {
         while (!Thread.interrupted()) {
           for (IncrementalIndexRow row : index.getFacts().keySet()) {
-            if (index.getMetricLongValue(row.getRowIndex(), 0) != 1) {
+            if (index.getMetricLongValue(row, 0) != 1) {
               checkFailedCount.addAndGet(1);
             }
           }
@@ -187,11 +187,11 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
     long jsSum = 0;
 
     for (IncrementalIndexRow row : indexExpr.getFacts().keySet()) {
-      exprSum += indexExpr.getMetricLongValue(row.getRowIndex(), 0);
+      exprSum += indexExpr.getMetricLongValue(row, 0);
     }
 
     for (IncrementalIndexRow row : indexJs.getFacts().keySet()) {
-      jsSum += indexJs.getMetricLongValue(row.getRowIndex(), 0);
+      jsSum += indexJs.getMetricLongValue(row, 0);
     }
 
     Assert.assertEquals(exprSum, jsSum);
