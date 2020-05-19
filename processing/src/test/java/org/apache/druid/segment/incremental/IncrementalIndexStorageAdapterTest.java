@@ -55,6 +55,7 @@ import org.apache.druid.query.groupby.GroupByQueryEngine;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
+import org.apache.druid.segment.CloserRule;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
@@ -68,6 +69,7 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -93,33 +95,26 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 
   private final IndexCreator indexCreator;
 
+  @Rule
+  public final CloserRule closerRule = new CloserRule(false);
+
   public IncrementalIndexStorageAdapterTest(
-      IndexCreator IndexCreator
+      String indexType
   )
   {
-    this.indexCreator = IndexCreator;
+    this.indexCreator = () -> closerRule.closeLater(
+        new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
+        .setMaxRowCount(1000)
+        .setIncrementalIndexType(indexType)
+        .build()
+    );
   }
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{index}: {0}")
   public static Collection<?> constructorFeeder()
   {
-    return Arrays.asList(
-        new Object[][]{
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex()
-                  {
-                    return new IncrementalIndex.Builder()
-                        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
-                        .setMaxRowCount(1000)
-                        .buildOnheap();
-                  }
-                }
-            }
-        }
-    );
+    return Arrays.asList("onheap", "offheap", "oak");
   }
 
   @Test
