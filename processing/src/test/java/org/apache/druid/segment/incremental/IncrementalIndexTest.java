@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.incremental;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.CloseableStupidPool;
@@ -49,10 +48,8 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 
 /**
  */
@@ -79,13 +76,26 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     resourceCloser.close();
   }
 
-  public IncrementalIndexTest(IndexCreator IndexCreator, Closer resourceCloser)
+  public IncrementalIndexTest(String indexType, boolean sortFacts, IncrementalIndexSchema schema,
+                              boolean deserializeComplexMetrics)
   {
-    this.indexCreator = IndexCreator;
-    this.resourceCloser = resourceCloser;
+    this.resourceCloser = Closer.create();
+    final CloseableStupidPool<ByteBuffer> pool = "offheap".equals(indexType) ?
+            new CloseableStupidPool<>(
+                "OffheapIncrementalIndex-bufferPool",
+                () -> ByteBuffer.allocate(256 * 1024)
+            ) : null;
+    resourceCloser.register(pool);
+
+    this.indexCreator = () -> new IncrementalIndex.Builder()
+            .setIndexSchema(schema)
+            .setDeserializeComplexMetrics(deserializeComplexMetrics)
+            .setSortFacts(sortFacts)
+            .setMaxRowCount(1000000)
+            .build(indexType, pool);
   }
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{index}: {0}, sortFacts={1}")
   public static Collection<?> constructorFeeder()
   {
     DimensionsSpec dimensions = new DimensionsSpec(
@@ -108,52 +118,15 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         .withMetrics(metrics)
         .build();
 
-    final List<Object[]> constructors = new ArrayList<>();
-    for (final Boolean sortFacts : ImmutableList.of(false, true)) {
-      constructors.add(
-          new Object[]{
-              new IndexCreator()
-              {
-                @Override
-                public IncrementalIndex createIndex()
-                {
-                  return new IncrementalIndex.Builder()
-                      .setIndexSchema(schema)
-                      .setDeserializeComplexMetrics(false)
-                      .setSortFacts(sortFacts)
-                      .setMaxRowCount(1000)
-                      .buildOnheap();
-                }
-              },
-              Closer.create()
-          }
-      );
-      final Closer poolCloser = Closer.create();
-      final CloseableStupidPool<ByteBuffer> stupidPool = new CloseableStupidPool<>(
-          "OffheapIncrementalIndex-bufferPool",
-          () -> ByteBuffer.allocate(256 * 1024)
-      );
-      poolCloser.register(stupidPool);
-      constructors.add(
-          new Object[]{
-              new IndexCreator()
-              {
-                @Override
-                public IncrementalIndex createIndex()
-                {
-                  return new IncrementalIndex.Builder()
-                      .setIndexSchema(schema)
-                      .setSortFacts(sortFacts)
-                      .setMaxRowCount(1000000)
-                      .buildOffheap(stupidPool);
-                }
-              },
-              poolCloser
-          }
-      );
-    }
+    return Arrays.asList(
+            new Object[] {"onheap", true, schema, false},
+            new Object[] {"offheap", true, schema, true},
+            new Object[] {"oak", true, schema, true},
 
-    return constructors;
+            new Object[] {"onheap", false, schema, false},
+            new Object[] {"offheap", false, schema, true},
+            new Object[] {"oak", false, schema, true}
+    );
   }
 
   @Test(expected = ISE.class)

@@ -32,15 +32,32 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class IncrementalIndexMultiValueSpecTest extends InitializedNullHandlingTest
 {
+  private final String indexType;
+
+  public IncrementalIndexMultiValueSpecTest(String indexType)
+  {
+    this.indexType = indexType;
+  }
+
+  @Parameterized.Parameters(name = "{index}: {0}")
+  public static Collection<?> constructorFeeder()
+  {
+    return Arrays.asList("onheap", "offheap", "oak");
+  }
+
   @Test
   public void test() throws IndexSizeExceededException
   {
@@ -81,7 +98,7 @@ public class IncrementalIndexMultiValueSpecTest extends InitializedNullHandlingT
     IncrementalIndex<?> index = new IncrementalIndex.Builder()
         .setIndexSchema(schema)
         .setMaxRowCount(10000)
-        .buildOnheap();
+        .build(indexType);
     index.add(
         new MapBasedInputRow(
             0,
