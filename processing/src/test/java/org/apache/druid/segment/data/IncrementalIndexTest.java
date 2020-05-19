@@ -113,50 +113,32 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   @Rule
   public final CloserRule closerRule = new CloserRule(false);
 
-  public IncrementalIndexTest(IndexCreator indexCreator)
+  public IncrementalIndexTest(String indexType, boolean rollup)
   {
-    this.indexCreator = indexCreator;
+    final CloseableStupidPool<ByteBuffer> pool = "offheap".equals(indexType) ?
+            new CloseableStupidPool<>(
+                "OffheapIncrementalIndex-bufferPool",
+                () -> ByteBuffer.allocate(256 * 1024)
+            ) : null;
+    RESOURCE_CLOSER.register(pool);
+    this.indexCreator = factories -> new Builder()
+            .setSimpleTestingIndexSchema(rollup, factories)
+            .setMaxRowCount(1000000)
+            .build(indexType, pool);
   }
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{index}: {0}, rollup={1}")
   public static Collection<?> constructorFeeder()
   {
-    final List<Object[]> params = new ArrayList<>();
-    params.add(new Object[] {(IndexCreator) IncrementalIndexTest::createIndex});
-    final CloseableStupidPool<ByteBuffer> pool1 = new CloseableStupidPool<>(
-        "OffheapIncrementalIndex-bufferPool",
-        () -> ByteBuffer.allocate(256 * 1024)
-    );
-    RESOURCE_CLOSER.register(pool1);
-    params.add(
-        new Object[] {
-            (IndexCreator) factories -> new Builder()
-                .setSimpleTestingIndexSchema(factories)
-                .setMaxRowCount(1000000)
-                .buildOffheap(pool1)
-        }
-    );
-    params.add(new Object[] {(IndexCreator) IncrementalIndexTest::createNoRollupIndex});
-    final CloseableStupidPool<ByteBuffer> pool2 = new CloseableStupidPool<>(
-        "OffheapIncrementalIndex-bufferPool",
-        () -> ByteBuffer.allocate(256 * 1024)
-    );
-    RESOURCE_CLOSER.register(pool2);
-    params.add(
-        new Object[] {
-            (IndexCreator) factories -> new Builder()
-                .setIndexSchema(
-                    new IncrementalIndexSchema.Builder()
-                        .withMetrics(factories)
-                        .withRollup(false)
-                        .build()
-                )
-                .setMaxRowCount(1000000)
-                .buildOffheap(pool2)
-        }
-    );
+    return Arrays.asList(
+            new Object[] {"onheap", true},
+            new Object[] {"offheap", true},
+            new Object[] {"oak", true},
 
-    return params;
+            new Object[] {"onheap", false},
+            new Object[] {"offheap", false},
+            new Object[] {"oak", false}
+    );
   }
 
   public static AggregatorFactory[] getDefaultCombiningAggregatorFactories()
@@ -186,6 +168,11 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
 
   public static IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories)
   {
+    return createIndex("onheap", aggregatorFactories);
+  }
+
+  public static IncrementalIndex createIndex(String indexType, AggregatorFactory[] aggregatorFactories)
+  {
     if (null == aggregatorFactories) {
       aggregatorFactories = DEFAULT_AGGREGATOR_FACTORIES;
     }
@@ -193,10 +180,10 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     return new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(aggregatorFactories)
         .setMaxRowCount(1000000)
-        .buildOnheap();
+        .build(indexType);
   }
 
-  public static IncrementalIndex createNoRollupIndex(AggregatorFactory[] aggregatorFactories)
+  public static IncrementalIndex createNoRollupIndex(String indexType, AggregatorFactory[] aggregatorFactories)
   {
     if (null == aggregatorFactories) {
       aggregatorFactories = DEFAULT_AGGREGATOR_FACTORIES;
@@ -205,7 +192,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     return new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(false, aggregatorFactories)
         .setMaxRowCount(1000000)
-        .buildOnheap();
+        .build(indexType);
   }
 
   public static void populateIndex(long timestamp, IncrementalIndex index) throws IndexSizeExceededException

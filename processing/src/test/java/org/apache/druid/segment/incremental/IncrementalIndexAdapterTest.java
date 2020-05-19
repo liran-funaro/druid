@@ -32,11 +32,17 @@ import org.apache.druid.segment.data.IncrementalIndexTest;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.function.Function;
 
+@RunWith(Parameterized.class)
 public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
 {
   private static final IndexSpec INDEX_SPEC = new IndexSpec(
@@ -46,11 +52,24 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
       CompressionFactory.LongEncodingStrategy.LONGS
   );
 
+  private final String indexType;
+
+  public IncrementalIndexAdapterTest(String indexType)
+  {
+    this.indexType = indexType;
+  }
+
+  @Parameterized.Parameters(name = "{index}: {0}")
+  public static Collection<?> constructorFeeder()
+  {
+    return Arrays.asList("onheap", "offheap", "oak");
+  }
+
   @Test
   public void testGetBitmapIndex() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex incrementalIndex = IncrementalIndexTest.createIndex(null);
+    IncrementalIndex incrementalIndex = IncrementalIndexTest.createIndex(indexType, null);
     IncrementalIndexTest.populateIndex(timestamp, incrementalIndex);
     IndexableAdapter adapter = new IncrementalIndexAdapter(
         incrementalIndex.getInterval(),
@@ -70,7 +89,7 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
   public void testGetRowsIterable() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(indexType, null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final IndexableAdapter incrementalAdapter = new IncrementalIndexAdapter(
@@ -94,19 +113,36 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
   public void testGetRowsIterableNoRollup() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createNoRollupIndex(null);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createNoRollupIndex(indexType, null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
-
-    ArrayList<Integer> dim1Vals = new ArrayList<>();
+    /*
+    facts.keySet() return the rows in the order they are stored internally.
+    In plain mode, OnheapInrementalIndex and OffheapIncrementalIndex sort their rows internally by timestamp then by
+    index (the order they were inserted).
+    OakIncrementalIndex, however, sort its rows in their native order (as it would be expected
+    by facts.persistIterable()).
+    To mitigate these differences, we validate the result without expecting a specific order.
+     */
+    HashMap<Integer, Integer> dim1Vals = new HashMap<>();
     for (IncrementalIndexRow row : toPersist1.getFacts().keySet()) {
-      dim1Vals.add(((int[]) row.getDim(0))[0]);
+      dim1Vals.put(row.getRowIndex(), ((int[]) row.getDim(0))[0]);
     }
-    ArrayList<Integer> dim2Vals = new ArrayList<>();
+
+    HashMap<Integer, Integer> dim2Vals = new HashMap<>();
     for (IncrementalIndexRow row : toPersist1.getFacts().keySet()) {
-      dim2Vals.add(((int[]) row.getDim(1))[0]);
+      dim2Vals.put(row.getRowIndex(), ((int[]) row.getDim(1))[0]);
+    }
+
+    Assert.assertEquals(6, dim1Vals.size());
+    Assert.assertEquals(6, dim2Vals.size());
+
+    List<Integer> expected = Arrays.asList(0, 1, 0, 1, 0, 1);
+    for (int i = 0; i < 6; i++) {
+      Assert.assertEquals(expected.get(i), dim1Vals.get(i));
+      Assert.assertEquals(expected.get(i), dim2Vals.get(i));
     }
 
     final IndexableAdapter incrementalAdapter = new IncrementalIndexAdapter(
@@ -156,13 +192,6 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(6, rowStrings.size());
     for (int i = 0; i < 6; i++) {
-      if (i % 2 == 0) {
-        Assert.assertEquals(0, (long) dim1Vals.get(i));
-        Assert.assertEquals(0, (long) dim2Vals.get(i));
-      } else {
-        Assert.assertEquals(1, (long) dim1Vals.get(i));
-        Assert.assertEquals(1, (long) dim2Vals.get(i));
-      }
       Assert.assertEquals(getExpected.apply(i), rowStrings.get(i));
     }
   }
