@@ -25,15 +25,32 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
 {
+  private final String indexType;
+
+  public IncrementalIndexRowSizeTest(String indexType)
+  {
+    this.indexType = indexType;
+  }
+
+  @Parameterized.Parameters(name = "{index}: {0}")
+  public static Collection<?> constructorFeeder()
+  {
+    return Arrays.asList("onheap", "offheap", "oak");
+  }
+
   @Test
   public void testIncrementalIndexRowSizeBasic()
   {
@@ -41,7 +58,7 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
         .setMaxRowCount(10000)
         .setMaxBytesInMemory(1000)
-        .buildOnheap();
+        .build(indexType);
     long time = System.currentTimeMillis();
     IncrementalIndex.IncrementalIndexRowResult tndResult = index.toIncrementalIndexRow(toMapRow(time, "billy", "A", "joe", "B"));
     IncrementalIndexRow td1 = tndResult.getIncrementalIndexRow();
@@ -55,7 +72,7 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
         .setMaxRowCount(10000)
         .setMaxBytesInMemory(1000)
-        .buildOnheap();
+        .build(indexType);
     long time = System.currentTimeMillis();
     IncrementalIndex.IncrementalIndexRowResult tndResult = index.toIncrementalIndexRow(toMapRow(
         time + 1,
@@ -75,7 +92,7 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
         .setMaxRowCount(10000)
         .setMaxBytesInMemory(1000)
-        .buildOnheap();
+        .build(indexType);
     long time = System.currentTimeMillis();
     IncrementalIndex.IncrementalIndexRowResult tndResult = index.toIncrementalIndexRow(toMapRow(
         time + 1,
