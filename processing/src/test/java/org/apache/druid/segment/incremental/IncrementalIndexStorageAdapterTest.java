@@ -94,32 +94,19 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
   private final IndexCreator indexCreator;
 
   public IncrementalIndexStorageAdapterTest(
-      IndexCreator IndexCreator
+      String indexType
   )
   {
-    this.indexCreator = IndexCreator;
+    this.indexCreator = () -> new IncrementalIndex.Builder()
+        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
+        .setMaxRowCount(1000)
+        .build(indexType);
   }
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{index}: {0}")
   public static Collection<?> constructorFeeder()
   {
-    return Arrays.asList(
-        new Object[][]{
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex()
-                  {
-                    return new IncrementalIndex.Builder()
-                        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
-                        .setMaxRowCount(1000)
-                        .buildOnheap();
-                  }
-                }
-            }
-        }
-    );
+    return Arrays.asList("onheap", "offheap", "oak");
   }
 
   @Test
