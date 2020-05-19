@@ -138,8 +138,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       }
     }
 
-    aggsTotalSize = aggOffsetInBuffer[metrics.length - 1] + metrics[metrics.length
-                                                                    - 1].getMaxIntermediateSizeWithNulls();
+    aggsTotalSize = metrics.length > 0 ? aggOffsetInBuffer[metrics.length - 1] +
+            metrics[metrics.length - 1].getMaxIntermediateSizeWithNulls() : 0;
 
     return new BufferAggregator[metrics.length];
   }
