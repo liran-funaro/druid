@@ -75,6 +75,7 @@ import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
@@ -108,9 +109,6 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class SearchBenchmark
 {
-  @Param({"1"})
-  private int numSegments;
-
   @Param({"750000"})
   private int rowsPerSegment;
 
@@ -121,6 +119,7 @@ public class SearchBenchmark
   private int limit;
 
   private static final Logger log = new Logger(SearchBenchmark.class);
+  private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
@@ -129,16 +128,10 @@ public class SearchBenchmark
     NullHandling.initializeForTests();
   }
 
-  private List<IncrementalIndex> incIndexes;
-  private List<QueryableIndex> qIndexes;
-
   private QueryRunnerFactory factory;
   private GeneratorSchemaInfo schemaInfo;
   private Druids.SearchQueryBuilder queryBuilder;
   private SearchQuery query;
-  private File tmpDir;
-
-  private ExecutorService executorService;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -313,13 +306,11 @@ public class SearchBenchmark
   }
 
   @Setup
-  public void setup() throws IOException
+  public void setup()
   {
     log.info("SETUP CALLED AT " + +System.currentTimeMillis());
 
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
-
-    executorService = Execs.multiThreaded(numSegments, "SearchThreadPool");
 
     setupQueries();
 
@@ -332,44 +323,6 @@ public class SearchBenchmark
     queryBuilder.limit(limit);
     query = queryBuilder.build();
 
-    incIndexes = new ArrayList<>();
-    for (int i = 0; i < numSegments; i++) {
-      log.info("Generating rows for segment " + i);
-      DataGenerator gen = new DataGenerator(
-          schemaInfo.getColumnSchemas(),
-          System.currentTimeMillis(),
-          schemaInfo.getDataInterval(),
-          rowsPerSegment
-      );
-
-      IncrementalIndex incIndex = makeIncIndex();
-
-      for (int j = 0; j < rowsPerSegment; j++) {
-        InputRow row = gen.nextRow();
-        if (j % 10000 == 0) {
-          log.info(j + " rows generated.");
-        }
-        incIndex.add(row);
-      }
-      incIndexes.add(incIndex);
-    }
-
-    tmpDir = FileUtils.createTempDir();
-    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
-
-    qIndexes = new ArrayList<>();
-    for (int i = 0; i < numSegments; i++) {
-      File indexFile = INDEX_MERGER_V9.persist(
-          incIndexes.get(i),
-          tmpDir,
-          new IndexSpec(),
-          null
-      );
-
-      QueryableIndex qIndex = INDEX_IO.loadIndex(indexFile);
-      qIndexes.add(qIndex);
-    }
-
     final SearchQueryConfig config = new SearchQueryConfig().withOverrides(query);
     factory = new SearchQueryRunnerFactory(
         new SearchStrategySelector(Suppliers.ofInstance(config)),
@@ -378,19 +331,109 @@ public class SearchBenchmark
     );
   }
 
-  @TearDown
-  public void tearDown() throws IOException
+  @State(Scope.Benchmark)
+  public static class IncrementalIndexState
   {
-    FileUtils.deleteDirectory(tmpDir);
+    @Param({"onheap", "offheap", "oak"})
+    private String indexType;
+
+    IncrementalIndex incIndex;
+
+    @Setup
+    public void setup(SearchBenchmark global) throws IndexSizeExceededException
+    {
+      DataGenerator gen = new DataGenerator(
+          global.schemaInfo.getColumnSchemas(),
+          System.currentTimeMillis(),
+          global.schemaInfo.getDataInterval(),
+          global.rowsPerSegment
+      );
+
+      incIndex = global.makeIncIndex(indexType);
+
+      for (int j = 0; j < global.rowsPerSegment; j++) {
+        InputRow row = gen.nextRow();
+        if (j % 10000 == 0) {
+          log.info(j + " rows generated.");
+        }
+        incIndex.add(row);
+      }
+    }
+
+    @TearDown
+    public void tearDown()
+    {
+      incIndex.close();
+    }
   }
 
-  private IncrementalIndex makeIncIndex()
+  @State(Scope.Benchmark)
+  public static class QueryableIndexState
+  {
+    @Param({"1"})
+    private int numSegments;
+
+    private ExecutorService executorService;
+    private File qIndexesDir;
+    private List<QueryableIndex> qIndexes;
+
+    @Setup
+    public void setup(SearchBenchmark global) throws IOException
+    {
+      executorService = Execs.multiThreaded(numSegments, "SearchThreadPool");
+
+      qIndexesDir = FileUtils.createTempDir();
+      qIndexes = new ArrayList<>();
+
+      DataGenerator gen = new DataGenerator(
+          global.schemaInfo.getColumnSchemas(),
+          RNG_SEED,
+          global.schemaInfo.getDataInterval(),
+          global.rowsPerSegment
+      );
+
+      for (int i = 0; i < numSegments; i++) {
+        log.info("Generating rows for segment " + i);
+
+        IncrementalIndex incIndex = global.makeIncIndex("onheap");
+
+        for (int j = 0; j < global.rowsPerSegment; j++) {
+          InputRow row = gen.nextRow();
+          if (j % 10000 == 0) {
+            log.info(j + " rows generated.");
+          }
+          incIndex.add(row);
+        }
+
+        File indexFile = INDEX_MERGER_V9.persist(
+            incIndex,
+            new File(qIndexesDir, String.valueOf(i)),
+            new IndexSpec(),
+            null
+        );
+        incIndex.close();
+
+        qIndexes.add(INDEX_IO.loadIndex(indexFile));
+      }
+    }
+
+    @TearDown
+    public void tearDown()
+    {
+      for (QueryableIndex index : qIndexes) {
+        index.close();
+      }
+      qIndexesDir.delete();
+    }
+  }
+
+  private IncrementalIndex makeIncIndex(String indexType)
   {
     return new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build(indexType);
   }
 
   private static <T> List<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query)
@@ -408,12 +451,12 @@ public class SearchBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleIncrementalIndex(Blackhole blackhole)
+  public void querySingleIncrementalIndex(Blackhole blackhole, IncrementalIndexState state)
   {
     QueryRunner<SearchHit> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("incIndex"),
-        new IncrementalIndexSegment(incIndexes.get(0), SegmentId.dummy("incIndex"))
+        new IncrementalIndexSegment(state.incIndex, SegmentId.dummy("incIndex"))
     );
 
     List<Result<SearchResultValue>> results = SearchBenchmark.runQuery(factory, runner, query);
@@ -423,12 +466,12 @@ public class SearchBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndex(Blackhole blackhole)
+  public void querySingleQueryableIndex(Blackhole blackhole, QueryableIndexState state)
   {
     final QueryRunner<Result<SearchResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("qIndex"),
-        new QueryableIndexSegment(qIndexes.get(0), SegmentId.dummy("qIndex"))
+        new QueryableIndexSegment(state.qIndexes.get(0), SegmentId.dummy("qIndex"))
     );
 
     List<Result<SearchResultValue>> results = SearchBenchmark.runQuery(factory, runner, query);
@@ -439,23 +482,23 @@ public class SearchBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndex(Blackhole blackhole)
+  public void queryMultiQueryableIndex(Blackhole blackhole, QueryableIndexState state)
   {
     List<QueryRunner<Row>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = factory.getToolchest();
-    for (int i = 0; i < numSegments; i++) {
+    for (int i = 0; i < state.numSegments; i++) {
       String segmentName = "qIndex " + i;
       final QueryRunner<Result<SearchResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
           SegmentId.dummy(segmentName),
-          new QueryableIndexSegment(qIndexes.get(i), SegmentId.dummy(segmentName))
+          new QueryableIndexSegment(state.qIndexes.get(i), SegmentId.dummy(segmentName))
       );
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }
 
     QueryRunner theRunner = toolChest.postMergeQueryDecoration(
         new FinalizeResultsQueryRunner<>(
-            toolChest.mergeResults(factory.mergeRunners(executorService, singleSegmentRunners)),
+            toolChest.mergeResults(factory.mergeRunners(state.executorService, singleSegmentRunners)),
             toolChest
         )
     );

@@ -87,12 +87,16 @@ public class IndexPersistBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"none", "moderate", "high"})
-  private String rollupOpportunity;
+  @Param({"0", "1000", "10000"})
+  private int rollupOpportunity;
+
+  @Param({"onheap", "offheap", "oak"})
+  private String indexType;
 
   private IncrementalIndex incIndex;
   private ArrayList<InputRow> rows;
   private GeneratorSchemaInfo schemaInfo;
+  private File tmpDir;
 
   @Setup
   public void setup()
@@ -104,22 +108,11 @@ public class IndexPersistBenchmark
     rows = new ArrayList<InputRow>();
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
-    int valuesPerTimestamp = 1;
-    switch (rollupOpportunity) {
-      case "moderate":
-        valuesPerTimestamp = 1000;
-        break;
-      case "high":
-        valuesPerTimestamp = 10000;
-        break;
-
-    }
-
     DataGenerator gen = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval().getStartMillis(),
-        valuesPerTimestamp,
+        rollupOpportunity,
         1000.0
     );
 
@@ -149,6 +142,18 @@ public class IndexPersistBenchmark
     incIndex = null;
   }
 
+  @Setup(Level.Invocation)
+  public void setupTemp()
+  {
+    tmpDir = FileUtils.createTempDir();
+  }
+
+  @TearDown(Level.Invocation)
+  public void teardownTemp() throws IOException
+  {
+    FileUtils.deleteDirectory(tmpDir);
+  }
+
   private IncrementalIndex makeIncIndex()
   {
     return new IncrementalIndex.Builder()
@@ -160,7 +165,7 @@ public class IndexPersistBenchmark
         )
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .build(indexType);
   }
 
   @Benchmark
@@ -168,21 +173,13 @@ public class IndexPersistBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void persistV9(Blackhole blackhole) throws Exception
   {
-    File tmpDir = FileUtils.createTempDir();
-    log.info("Using temp dir: " + tmpDir.getAbsolutePath());
-    try {
-      File indexFile = INDEX_MERGER_V9.persist(
-          incIndex,
-          tmpDir,
-          new IndexSpec(),
-          null
-      );
+    File indexFile = INDEX_MERGER_V9.persist(
+        incIndex,
+        tmpDir,
+        new IndexSpec(),
+        null
+    );
 
-      blackhole.consume(indexFile);
-
-    }
-    finally {
-      FileUtils.deleteDirectory(tmpDir);
-    }
+    blackhole.consume(indexFile);
   }
 }

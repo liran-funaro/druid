@@ -33,8 +33,8 @@ import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Mode;
-import org.openjdk.jmh.annotations.OperationsPerInvocation;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -53,12 +53,15 @@ public class IncrementalIndexRowTypeBenchmark
     NullHandling.initializeForTests();
   }
 
-  private IncrementalIndex incIndex;
-  private IncrementalIndex incFloatIndex;
-  private IncrementalIndex incStrIndex;
+  @Param({"250000"})
+  private int rowsPerSegment;
+
+  @Param({"onheap", "offheap", "oak"})
+  private String indexType;
+
+  IncrementalIndex incIndex;
   private static AggregatorFactory[] aggs;
   static final int DIMENSION_COUNT = 8;
-  static final int MAX_ROWS = 250000;
 
   private ArrayList<InputRow> longRows = new ArrayList<InputRow>();
   private ArrayList<InputRow> floatRows = new ArrayList<InputRow>();
@@ -130,41 +133,44 @@ public class IncrementalIndexRowTypeBenchmark
         .setSimpleTestingIndexSchema(aggs)
         .setDeserializeComplexMetrics(false)
         .setReportParseExceptions(false)
-        .setMaxRowCount(MAX_ROWS)
-        .buildOnheap();
+        .setMaxRowCount(rowsPerSegment)
+        .build(indexType);
   }
 
   @Setup
   public void setup()
   {
-    for (int i = 0; i < MAX_ROWS; i++) {
+    for (int i = 0; i < rowsPerSegment; i++) {
       longRows.add(getLongRow(0, DIMENSION_COUNT));
     }
 
-    for (int i = 0; i < MAX_ROWS; i++) {
+    for (int i = 0; i < rowsPerSegment; i++) {
       floatRows.add(getFloatRow(0, DIMENSION_COUNT));
     }
 
-    for (int i = 0; i < MAX_ROWS; i++) {
+    for (int i = 0; i < rowsPerSegment; i++) {
       stringRows.add(getStringRow(0, DIMENSION_COUNT));
     }
   }
 
-  @Setup(Level.Iteration)
+  @Setup(Level.Invocation)
   public void setup2()
   {
     incIndex = makeIncIndex();
-    incFloatIndex = makeIncIndex();
-    incStrIndex = makeIncIndex();
+  }
+
+  @Setup(Level.Invocation)
+  public void tearDown()
+  {
+    incIndex.close();
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  @OperationsPerInvocation(MAX_ROWS)
   public void normalLongs(Blackhole blackhole) throws Exception
   {
-    for (int i = 0; i < MAX_ROWS; i++) {
+    for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = longRows.get(i);
       int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);
@@ -174,12 +180,11 @@ public class IncrementalIndexRowTypeBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  @OperationsPerInvocation(MAX_ROWS)
   public void normalFloats(Blackhole blackhole) throws Exception
   {
-    for (int i = 0; i < MAX_ROWS; i++) {
+    for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = floatRows.get(i);
-      int rv = incFloatIndex.add(row).getRowCount();
+      int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }
@@ -187,12 +192,11 @@ public class IncrementalIndexRowTypeBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  @OperationsPerInvocation(MAX_ROWS)
   public void normalStrings(Blackhole blackhole) throws Exception
   {
-    for (int i = 0; i < MAX_ROWS; i++) {
+    for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = stringRows.get(i);
-      int rv = incStrIndex.add(row).getRowCount();
+      int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }
