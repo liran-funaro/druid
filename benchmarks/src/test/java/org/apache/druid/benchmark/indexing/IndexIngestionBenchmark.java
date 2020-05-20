@@ -40,6 +40,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -61,6 +62,12 @@ public class IndexIngestionBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
+  @Param({"0", "1000", "10000"})
+  private int rollupOpportunity;
+
+  @Param({"onheap", "offheap", "oak"})
+  private String indexType;
+
   private static final Logger log = new Logger(IndexIngestionBenchmark.class);
   private static final int RNG_SEED = 9999;
 
@@ -77,14 +84,15 @@ public class IndexIngestionBenchmark
   {
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
-    rows = new ArrayList<InputRow>();
+    rows = new ArrayList<>();
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
     DataGenerator gen = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
-        schemaInfo.getDataInterval(),
-        rowsPerSegment
+        schemaInfo.getDataInterval().getStartMillis(),
+        rollupOpportunity,
+        1000.0
     );
 
     for (int i = 0; i < rowsPerSegment; i++) {
@@ -102,6 +110,12 @@ public class IndexIngestionBenchmark
     incIndex = makeIncIndex();
   }
 
+  @TearDown(Level.Invocation)
+  public void tearDown()
+  {
+    incIndex.close();
+  }
+
   private IncrementalIndex makeIncIndex()
   {
     return new IncrementalIndex.Builder()
@@ -112,7 +126,8 @@ public class IndexIngestionBenchmark
                 .build()
         )
         .setMaxRowCount(rowsPerSegment * 2)
-        .buildOnheap();
+        .setIncrementalIndexType(indexType)
+        .build();
   }
 
   @Benchmark

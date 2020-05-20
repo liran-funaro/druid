@@ -85,6 +85,7 @@ import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
@@ -120,9 +121,6 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class GroupByBenchmark
 {
-  @Param({"4"})
-  private int numSegments;
-
   @Param({"2", "4"})
   private int numProcessingThreads;
 
@@ -154,16 +152,10 @@ public class GroupByBenchmark
     NullHandling.initializeForTests();
   }
 
-  private File tmpDir;
-  private IncrementalIndex anIncrementalIndex;
-  private List<QueryableIndex> queryableIndexes;
-
   private QueryRunnerFactory<ResultRow, GroupByQuery> factory;
 
   private GeneratorSchemaInfo schemaInfo;
   private GroupByQuery query;
-
-  private ExecutorService executorService;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -428,13 +420,11 @@ public class GroupByBenchmark
   }
 
   @Setup(Level.Trial)
-  public void setup() throws IOException
+  public void setup()
   {
     log.info("SETUP CALLED AT " + +System.currentTimeMillis());
 
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
-
-    executorService = Execs.multiThreaded(numProcessingThreads, "GroupByThreadPool[%d]");
 
     setupQueries();
 
@@ -444,58 +434,6 @@ public class GroupByBenchmark
 
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schemaName);
     query = SCHEMA_QUERY_MAP.get(schemaName).get(queryName);
-
-    final DataGenerator dataGenerator = new DataGenerator(
-        schemaInfo.getColumnSchemas(),
-        RNG_SEED + 1,
-        schemaInfo.getDataInterval(),
-        rowsPerSegment
-    );
-
-    tmpDir = FileUtils.createTempDir();
-    log.info("Using temp dir: %s", tmpDir.getAbsolutePath());
-
-    // queryableIndexes   -> numSegments worth of on-disk segments
-    // anIncrementalIndex -> the last incremental index
-    anIncrementalIndex = null;
-    queryableIndexes = new ArrayList<>(numSegments);
-
-    for (int i = 0; i < numSegments; i++) {
-      log.info("Generating rows for segment %d/%d", i + 1, numSegments);
-
-      final IncrementalIndex index = makeIncIndex(schemaInfo.isWithRollup());
-
-      for (int j = 0; j < rowsPerSegment; j++) {
-        final InputRow row = dataGenerator.nextRow();
-        if (j % 20000 == 0) {
-          log.info("%,d/%,d rows generated.", i * rowsPerSegment + j, rowsPerSegment * numSegments);
-        }
-        index.add(row);
-      }
-
-      log.info(
-          "%,d/%,d rows generated, persisting segment %d/%d.",
-          (i + 1) * rowsPerSegment,
-          rowsPerSegment * numSegments,
-          i + 1,
-          numSegments
-      );
-
-      final File file = INDEX_MERGER_V9.persist(
-          index,
-          new File(tmpDir, String.valueOf(i)),
-          new IndexSpec(),
-          null
-      );
-
-      queryableIndexes.add(INDEX_IO.loadIndex(file));
-
-      if (i == numSegments - 1) {
-        anIncrementalIndex = index;
-      } else {
-        index.close();
-      }
-    }
 
     NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
         "GroupByBenchmark-computeBufferPool",
@@ -574,7 +512,103 @@ public class GroupByBenchmark
     );
   }
 
-  private IncrementalIndex makeIncIndex(boolean withRollup)
+  @State(Scope.Benchmark)
+  public static class IncrementalIndexState
+  {
+    @Param({"onheap", "offheap", "oak"})
+    private String indexType;
+
+    IncrementalIndex incIndex;
+
+    @Setup(Level.Trial)
+    public void setup(GroupByBenchmark global) throws IndexSizeExceededException
+    {
+      DataGenerator gen = new DataGenerator(
+          global.schemaInfo.getColumnSchemas(),
+          RNG_SEED,
+          global.schemaInfo.getDataInterval(),
+          global.rowsPerSegment
+      );
+
+      incIndex = global.makeIncIndex(indexType, global.schemaInfo.isWithRollup());
+
+      for (int j = 0; j < global.rowsPerSegment; j++) {
+        InputRow row = gen.nextRow();
+        if (j % 10000 == 0) {
+          log.info(j + " rows generated.");
+        }
+        incIndex.add(row);
+      }
+    }
+
+    @TearDown(Level.Trial)
+    public void tearDown()
+    {
+      incIndex.close();
+    }
+  }
+
+  @State(Scope.Benchmark)
+  public static class QueryableIndexState
+  {
+    @Param({"4"})
+    private int numSegments;
+
+    private ExecutorService executorService;
+    private File qIndexesDir;
+    private List<QueryableIndex> qIndexes;
+
+    @Setup(Level.Trial)
+    public void setup(GroupByBenchmark global) throws IOException
+    {
+      executorService = Execs.multiThreaded(global.numProcessingThreads, "GroupByThreadPool[%d]");
+
+      qIndexesDir = FileUtils.createTempDir();
+      qIndexes = new ArrayList<>();
+
+      DataGenerator gen = new DataGenerator(
+          global.schemaInfo.getColumnSchemas(),
+          RNG_SEED,
+          global.schemaInfo.getDataInterval(),
+          global.rowsPerSegment
+      );
+
+      for (int i = 0; i < numSegments; i++) {
+        log.info("Generating rows for segment " + i);
+
+        IncrementalIndex incIndex = global.makeIncIndex("onheap", global.schemaInfo.isWithRollup());
+
+        for (int j = 0; j < global.rowsPerSegment; j++) {
+          InputRow row = gen.nextRow();
+          if (j % 10000 == 0) {
+            log.info(j + " rows generated.");
+          }
+          incIndex.add(row);
+        }
+
+        File indexFile = INDEX_MERGER_V9.persist(
+            incIndex,
+            new File(qIndexesDir, String.valueOf(i)),
+            new IndexSpec(),
+            null
+        );
+        incIndex.close();
+
+        qIndexes.add(INDEX_IO.loadIndex(indexFile));
+      }
+    }
+
+    @TearDown(Level.Trial)
+    public void tearDown()
+    {
+      for (QueryableIndex index : qIndexes) {
+        index.close();
+      }
+      qIndexesDir.delete();
+    }
+  }
+
+  private IncrementalIndex makeIncIndex(String indexType, boolean withRollup)
   {
     return new IncrementalIndex.Builder()
         .setIndexSchema(
@@ -586,31 +620,8 @@ public class GroupByBenchmark
         )
         .setConcurrentEventAdd(true)
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
-  }
-
-  @TearDown(Level.Trial)
-  public void tearDown()
-  {
-    try {
-      if (anIncrementalIndex != null) {
-        anIncrementalIndex.close();
-      }
-
-      if (queryableIndexes != null) {
-        for (QueryableIndex index : queryableIndexes) {
-          index.close();
-        }
-      }
-
-      if (tmpDir != null) {
-        FileUtils.deleteDirectory(tmpDir);
-      }
-    }
-    catch (IOException e) {
-      log.warn(e, "Failed to tear down, temp dir was: %s", tmpDir);
-      throw new RuntimeException(e);
-    }
+        .setIncrementalIndexType(indexType)
+        .build();
   }
 
   private static <T> Sequence<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query)
@@ -627,12 +638,12 @@ public class GroupByBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleIncrementalIndex(Blackhole blackhole)
+  public void querySingleIncrementalIndex(Blackhole blackhole, IncrementalIndexState state)
   {
     QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("incIndex"),
-        new IncrementalIndexSegment(anIncrementalIndex, SegmentId.dummy("incIndex"))
+        new IncrementalIndexSegment(state.incIndex, SegmentId.dummy("incIndex"))
     );
 
     final Sequence<ResultRow> results = GroupByBenchmark.runQuery(factory, runner, query);
@@ -647,12 +658,12 @@ public class GroupByBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndex(Blackhole blackhole)
+  public void querySingleQueryableIndex(Blackhole blackhole, QueryableIndexState state)
   {
     QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
         SegmentId.dummy("qIndex"),
-        new QueryableIndexSegment(queryableIndexes.get(0), SegmentId.dummy("qIndex"))
+        new QueryableIndexSegment(state.qIndexes.get(0), SegmentId.dummy("qIndex"))
     );
 
     final Sequence<ResultRow> results = GroupByBenchmark.runQuery(factory, runner, query);
@@ -667,12 +678,12 @@ public class GroupByBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndexX(Blackhole blackhole)
+  public void queryMultiQueryableIndexX(Blackhole blackhole, QueryableIndexState state)
   {
     QueryToolChest<ResultRow, GroupByQuery> toolChest = factory.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            factory.mergeRunners(executorService, makeMultiRunners())
+            factory.mergeRunners(state.executorService, makeMultiRunners(state))
         ),
         (QueryToolChest) toolChest
     );
@@ -685,12 +696,12 @@ public class GroupByBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndexWithSpilling(Blackhole blackhole)
+  public void queryMultiQueryableIndexWithSpilling(Blackhole blackhole, QueryableIndexState state)
   {
     QueryToolChest<ResultRow, GroupByQuery> toolChest = factory.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            factory.mergeRunners(executorService, makeMultiRunners())
+            factory.mergeRunners(state.executorService, makeMultiRunners(state))
         ),
         (QueryToolChest) toolChest
     );
@@ -706,7 +717,7 @@ public class GroupByBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndexWithSerde(Blackhole blackhole)
+  public void queryMultiQueryableIndexWithSerde(Blackhole blackhole, QueryableIndexState state)
   {
     QueryToolChest<ResultRow, GroupByQuery> toolChest = factory.getToolchest();
     //noinspection unchecked
@@ -716,7 +727,7 @@ public class GroupByBenchmark
                 new DefaultObjectMapper(new SmileFactory()),
                 ResultRow.class,
                 toolChest.mergeResults(
-                    factory.mergeRunners(executorService, makeMultiRunners())
+                    factory.mergeRunners(state.executorService, makeMultiRunners(state))
                 )
             )
         ),
@@ -728,15 +739,15 @@ public class GroupByBenchmark
     blackhole.consume(results);
   }
 
-  private List<QueryRunner<ResultRow>> makeMultiRunners()
+  private List<QueryRunner<ResultRow>> makeMultiRunners(QueryableIndexState state)
   {
     List<QueryRunner<ResultRow>> runners = new ArrayList<>();
-    for (int i = 0; i < numSegments; i++) {
+    for (int i = 0; i < state.numSegments; i++) {
       String segmentName = "qIndex " + i;
       QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
           SegmentId.dummy(segmentName),
-          new QueryableIndexSegment(queryableIndexes.get(i), SegmentId.dummy(segmentName))
+          new QueryableIndexSegment(state.qIndexes.get(i), SegmentId.dummy(segmentName))
       );
       runners.add(factory.getToolchest().preMergeQueryDecoration(runner));
     }
