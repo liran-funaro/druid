@@ -57,6 +57,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -81,6 +82,9 @@ public class IncrementalIndexReadBenchmark
 
   @Param({"true", "false"})
   private boolean rollup;
+
+  @Param({"onheap", "offheap", "oak"})
+  private String indexType;
 
   private static final Logger log = new Logger(IncrementalIndexReadBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -121,6 +125,12 @@ public class IncrementalIndexReadBenchmark
 
   }
 
+  @TearDown
+  public void tearDown()
+  {
+    incIndex.close();
+  }
+
   private IncrementalIndex makeIncIndex()
   {
     return new IncrementalIndex.Builder()
@@ -132,7 +142,8 @@ public class IncrementalIndexReadBenchmark
         )
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .setIncrementalIndexType(indexType)
+        .build();
   }
 
   @Benchmark
