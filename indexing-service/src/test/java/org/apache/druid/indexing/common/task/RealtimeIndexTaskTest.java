@@ -829,6 +829,7 @@ public class RealtimeIndexTaskTest
         null
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
+        null,
         1000,
         null,
         new Period("P1Y"),

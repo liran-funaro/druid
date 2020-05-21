@@ -53,6 +53,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     return FileUtils.createTempDir("druid-realtime-persist");
   }
 
+  private final String incrementalIndexType;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final DynamicPartitionsSpec partitionsSpec;
@@ -74,6 +75,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
 
   @JsonCreator
   public RealtimeAppenderatorTuningConfig(
+      @JsonProperty("incrementalIndexType") @Nullable String incrementalIndexType,
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
@@ -93,6 +95,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
   )
   {
+    this.incrementalIndexType = incrementalIndexType == null ? DEFAULT_INCREMENTAL_INDEX_TYPE : incrementalIndexType;
     this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
     // initializing this to 0, it will be lazily intialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
@@ -133,6 +136,13 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
+  }
+
+  @Override
+  @JsonProperty
+  public String getIncrementalIndexType()
+  {
+    return incrementalIndexType;
   }
 
   @Override
@@ -260,6 +270,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   public RealtimeAppenderatorTuningConfig withBasePersistDirectory(File dir)
   {
     return new RealtimeAppenderatorTuningConfig(
+        incrementalIndexType,
         maxRowsInMemory,
         maxBytesInMemory,
         partitionsSpec.getMaxRowsPerSegment(),

@@ -65,6 +65,7 @@ public class SinkTest
     final Interval interval = Intervals.of("2013-01-01/2013-01-02");
     final String version = DateTimes.nowUtc().toString();
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
+        null,
         100,
         null,
         new Period("P1Y"),
@@ -90,6 +91,7 @@ public class SinkTest
         schema,
         tuningConfig.getShardSpec(),
         version,
+        tuningConfig.getIncrementalIndexType(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
@@ -220,6 +222,7 @@ public class SinkTest
     final Interval interval = Intervals.of("2013-01-01/2013-01-02");
     final String version = DateTimes.nowUtc().toString();
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
+        null,
         100,
         null,
         new Period("P1Y"),
@@ -245,6 +248,7 @@ public class SinkTest
         schema,
         tuningConfig.getShardSpec(),
         version,
+        tuningConfig.getIncrementalIndexType(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),

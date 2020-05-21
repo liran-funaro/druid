@@ -32,6 +32,11 @@ public interface AppenderatorConfig
   boolean isReportParseExceptions();
 
   /**
+   * The inceremental index implementation to use
+   */
+  String getIncrementalIndexType();
+
+  /**
    * Maximum number of rows in memory before persisting to local storage
    */
   int getMaxRowsInMemory();
