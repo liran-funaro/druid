@@ -199,6 +199,7 @@ public class RealtimePlumberSchoolTest
     EasyMock.replay(announcer, segmentPublisher, dataSegmentPusher, handoffNotifierFactory, handoffNotifier, emitter);
 
     tuningConfig = new RealtimeTuningConfig(
+        null,
         1,
         null,
         null,
@@ -277,6 +278,7 @@ public class RealtimePlumberSchoolTest
         schema,
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getIncrementalIndexType(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
@@ -323,6 +325,7 @@ public class RealtimePlumberSchoolTest
         schema,
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getIncrementalIndexType(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
@@ -374,6 +377,7 @@ public class RealtimePlumberSchoolTest
         schema2,
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getIncrementalIndexType(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),

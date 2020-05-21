@@ -75,11 +75,13 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
 
   public KinesisSupervisorTuningConfig(
+      @JsonProperty("incrementalIndexType") @Nullable String incrementalIndexType,
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
@@ -115,6 +117,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   )
   {
     super(
+        incrementalIndexType,
         maxRowsInMemory,
         maxBytesInMemory,
         maxRowsPerSegment,
@@ -248,6 +251,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   public KinesisIndexTaskTuningConfig convertToTaskTuningConfig()
   {
     return new KinesisIndexTaskTuningConfig(
+        getIncrementalIndexType(),
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
         getMaxRowsPerSegment(),
