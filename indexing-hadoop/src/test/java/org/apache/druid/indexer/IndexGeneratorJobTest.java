@@ -528,6 +528,7 @@ public class IndexGeneratorJobTest
                 null,
                 null,
                 null,
+                null,
                 maxRowsInMemory,
                 maxBytesInMemory,
                 true,

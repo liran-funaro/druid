@@ -168,6 +168,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisorRecordSupplier = createMock(KinesisRecordSupplier.class);
 
     tuningConfig = new KinesisSupervisorTuningConfig(
+        null,
         1000,
         null,
         50000,
@@ -3690,6 +3691,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     DataSchema modifiedDataSchema = getDataSchema("some other datasource");
 
     KinesisSupervisorTuningConfig modifiedTuningConfig = new KinesisSupervisorTuningConfig(
+        null,
         1000,
         null,
         50000,
@@ -4742,6 +4744,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     };
 
     final KinesisSupervisorTuningConfig tuningConfig = new KinesisSupervisorTuningConfig(
+        null,
         1000,
         null,
         50000,

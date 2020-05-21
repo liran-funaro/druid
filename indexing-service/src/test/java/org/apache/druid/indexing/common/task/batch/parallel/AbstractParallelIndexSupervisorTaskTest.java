@@ -159,6 +159,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           null,
           null,
           null,
+          null,
           2,
           null,
           null,
@@ -233,6 +234,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   )
   {
     return new ParallelIndexTuningConfig(
+        null,
         null,
         null,
         null,

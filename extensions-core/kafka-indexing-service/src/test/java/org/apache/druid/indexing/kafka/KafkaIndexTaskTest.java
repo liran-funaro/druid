@@ -2494,6 +2494,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   ) throws JsonProcessingException
   {
     final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
+        null,
         1000,
         null,
         maxRowsPerSegment,
