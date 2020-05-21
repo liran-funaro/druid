@@ -24,11 +24,11 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -58,16 +58,34 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 10)
 @Measurement(iterations = 25)
-public class IndexPersistBenchmark
+public class FullScaleIngestionBenchmark
 {
+  @Param({"2000000"})
+  private int rowsPerSegment;
+
+  @Param({"100000", "500000", "1000000", "1500000", "2000000"})
+  private int maxRowsBeforePersist;
+
+  @Param({"basic"})
+  private String schema;
+
+  @Param({"true", "false"})
+  private boolean rollup;
+
+  @Param({"0", "1", "10", "100", "1000", "10000"})
+  private int rollupOpportunity;
+
+  @Param({"onheap", "offheap", "oak"})
+  private String indexType;
+
   public static final ObjectMapper JSON_MAPPER;
-  private static final Logger log = new Logger(IndexPersistBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
@@ -82,37 +100,26 @@ public class IndexPersistBenchmark
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
-  @Param({"75000"})
-  private int rowsPerSegment;
-
-  @Param({"rollo"})
-  private String schema;
-
-  @Param({"true", "false"})
-  private boolean rollup;
-
-  @Param({"0", "1000", "10000"})
-  private int rollupOpportunity;
-
-  @Param({"onheap", "offheap", "oak"})
-  private String indexType;
-
   private IncrementalIndex incIndex;
-  private ArrayList<InputRow> rows;
   private GeneratorSchemaInfo schemaInfo;
-  private File tmpDir;
+  private DataGenerator gen;
+  private List<File> indexesToMerge;
+  private File mergeTmpFile;
 
   @Setup
-  public void setup()
+  public void setup() throws IOException
   {
-    log.info("SETUP CALLED AT " + System.currentTimeMillis());
-
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
-    rows = new ArrayList<InputRow>();
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
+  }
 
-    DataGenerator gen = new DataGenerator(
+  @Setup(Level.Invocation)
+  public void setup2()
+  {
+    incIndex = null;
+
+    gen = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval().getStartMillis(),
@@ -120,42 +127,25 @@ public class IndexPersistBenchmark
         1000.0
     );
 
-    for (int i = 0; i < rowsPerSegment; i++) {
-      InputRow row = gen.nextRow();
-      if (i % 10000 == 0) {
-        log.info(i + " rows generated.");
-      }
-      rows.add(row);
-    }
-  }
-
-  @Setup(Level.Iteration)
-  public void setup2() throws IOException
-  {
-    incIndex = makeIncIndex();
-    for (int i = 0; i < rowsPerSegment; i++) {
-      InputRow row = rows.get(i);
-      incIndex.add(row);
-    }
-  }
-
-  @TearDown(Level.Iteration)
-  public void teardown()
-  {
-    incIndex.close();
-    incIndex = null;
-  }
-
-  @Setup(Level.Invocation)
-  public void setupTemp()
-  {
-    tmpDir = FileUtils.createTempDir();
+    mergeTmpFile = null;
+    indexesToMerge = new ArrayList<>();
   }
 
   @TearDown(Level.Invocation)
-  public void teardownTemp() throws IOException
+  public void tearDown() throws IOException
   {
-    FileUtils.deleteDirectory(tmpDir);
+    if (incIndex != null) {
+      incIndex.close();
+      incIndex = null;
+    }
+
+    for (File f : indexesToMerge) {
+      FileUtils.deleteDirectory(f);
+    }
+
+    if (mergeTmpFile != null) {
+      mergeTmpFile.delete();
+    }
   }
 
   private IncrementalIndex makeIncIndex()
@@ -168,38 +158,107 @@ public class IndexPersistBenchmark
                 .build()
         )
         .setReportParseExceptions(false)
-        .setMaxRowCount(rowsPerSegment)
+        .setMaxRowCount(rowsPerSegment * 2)
         .build(indexType);
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void persistV9(Blackhole blackhole) throws Exception
+  public void addPersistMerge(Blackhole blackhole) throws Exception
   {
-    File indexFile = INDEX_MERGER_V9.persist(
-        incIndex,
-        tmpDir,
+    addPersist(blackhole);
+    incIndex.close();
+    incIndex = null;
+
+    List<QueryableIndex> qIndexesToMerge = new ArrayList<>();
+    for (File f : indexesToMerge) {
+      QueryableIndex qIndex = INDEX_IO.loadIndex(f);
+      qIndexesToMerge.add(qIndex);
+    }
+
+    mergeTmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
+    mergeTmpFile.delete();
+    mergeTmpFile.mkdirs();
+
+    File mergedFile = INDEX_MERGER_V9.mergeQueryableIndex(
+        qIndexesToMerge,
+        rollup,
+        schemaInfo.getAggsArray(),
+        mergeTmpFile,
         new IndexSpec(),
         null
     );
 
+    blackhole.consume(mergedFile);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void addPersist(Blackhole blackhole) throws Exception
+  {
+    incIndex = makeIncIndex();
+    for (int i = 0; i < rowsPerSegment; i++) {
+      InputRow row = gen.nextRow();
+      int rv = incIndex.add(row).getRowCount();
+      blackhole.consume(rv);
+
+      if (incIndex.size() >= maxRowsBeforePersist || i == rowsPerSegment - 1) {
+        persistV9(blackhole);
+        incIndex.close();
+        incIndex = makeIncIndex();
+      }
+    }
+
+    blackhole.consume(indexesToMerge);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void add(Blackhole blackhole) throws Exception
+  {
+    incIndex = makeIncIndex();
+    for (int i = 0; i < rowsPerSegment; i++) {
+      InputRow row = gen.nextRow();
+      int rv = incIndex.add(row).getRowCount();
+      blackhole.consume(rv);
+
+      if (incIndex.size() >= maxRowsBeforePersist || i == rowsPerSegment - 1) {
+        incIndex.close();
+        incIndex = makeIncIndex();
+      }
+    }
+  }
+
+  public void persistV9(Blackhole blackhole) throws Exception
+  {
+    File indexFile = FileUtils.createTempDir();
+    indexesToMerge.add(indexFile);
+    indexFile = INDEX_MERGER_V9.persist(
+        incIndex,
+        indexFile,
+        new IndexSpec(),
+        null
+    );
     blackhole.consume(indexFile);
   }
 
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(IndexPersistBenchmark.class.getSimpleName() + ".persistV9$")
+        .include(FullScaleIngestionBenchmark.class.getSimpleName() + ".add$")
         .warmupIterations(3)
         .measurementIterations(10)
-        // .measurementTime(TimeValue.NONE)
         .forks(0)
         .threads(1)
         .param("indexType", "oak")
-        .param("rollup", "true")
+        .param("rollup", "false")
         .param("rollupOpportunity", "0")
+        .param("maxRowsBeforePersist", "1000000")
         .param("rowsPerSegment", "1000000")
+        // .param("rowsPerSegment", "1000000")
         .build();
 
     new Runner(opt).run();

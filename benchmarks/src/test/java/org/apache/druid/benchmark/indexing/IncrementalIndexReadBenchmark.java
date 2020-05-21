@@ -60,6 +60,10 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -220,5 +224,22 @@ public class IncrementalIndexReadBenchmark
   private static DimensionSelector makeDimensionSelector(Cursor cursor, String name)
   {
     return cursor.getColumnSelectorFactory().makeDimensionSelector(new DefaultDimensionSpec(name, null));
+  }
+
+  public static void main(String[] args) throws RunnerException
+  {
+    Options opt = new OptionsBuilder()
+        .include(IncrementalIndexReadBenchmark.class.getSimpleName() + ".readWithFilters")
+        .warmupIterations(3)
+        .measurementIterations(10)
+        // .measurementTime(TimeValue.NONE)
+        .forks(0)
+        .threads(1)
+        .param("indexType", "onheap")
+        .param("rollup", "true")
+        .param("rowsPerSegment", "1000000")
+        .build();
+
+    new Runner(opt).run();
   }
 }

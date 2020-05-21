@@ -45,6 +45,7 @@ import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
@@ -55,9 +56,16 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
+import sun.misc.VM;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryPoolMXBean;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -95,9 +103,9 @@ public class IndexMergeBenchmark
     NullHandling.initializeForTests();
   }
 
-  private List<QueryableIndex> indexesToMerge;
   private GeneratorSchemaInfo schemaInfo;
-  private File tmpDir;
+  private List<File> indexesToMerge;
+  private File mergeTmpFile;
   private IndexMergerV9 indexMergerV9;
 
   static {
@@ -123,14 +131,14 @@ public class IndexMergeBenchmark
 
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
-    for (int i = 0; i < numSegments; i++) {
-      DataGenerator gen = new DataGenerator(
-          schemaInfo.getColumnSchemas(),
-          RNG_SEED + i,
-          schemaInfo.getDataInterval(),
-          rowsPerSegment
-      );
+    DataGenerator gen = new DataGenerator(
+        schemaInfo.getColumnSchemas(),
+        RNG_SEED,
+        schemaInfo.getDataInterval(),
+        rowsPerSegment * numSegments
+    );
 
+    for (int i = 0; i < numSegments; i++) {
       IncrementalIndex incIndex = makeIncIndex();
 
       for (int j = 0; j < rowsPerSegment; j++) {
@@ -141,19 +149,37 @@ public class IndexMergeBenchmark
         incIndex.add(row);
       }
 
-      tmpDir = FileUtils.createTempDir();
-      log.info("Using temp dir: " + tmpDir.getAbsolutePath());
-
       File indexFile = indexMergerV9.persist(
           incIndex,
-          tmpDir,
+          FileUtils.createTempDir(),
           new IndexSpec(),
           null
       );
 
-      QueryableIndex qIndex = INDEX_IO.loadIndex(indexFile);
-      indexesToMerge.add(qIndex);
+      indexesToMerge.add(indexFile);
     }
+  }
+
+  @Setup(Level.Invocation)
+  public void setup2() throws IOException
+  {
+    mergeTmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
+    mergeTmpFile.delete();
+    mergeTmpFile.mkdirs();
+  }
+
+  @TearDown
+  public void tearDown()
+  {
+    for (File f : indexesToMerge) {
+      f.delete();
+    }
+  }
+
+  @TearDown(Level.Invocation)
+  public void tearDown2()
+  {
+    mergeTmpFile.delete();
   }
 
   @Benchmark
@@ -161,32 +187,22 @@ public class IndexMergeBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void mergeV9(Blackhole blackhole) throws Exception
   {
-    File tmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
-    tmpFile.delete();
-    tmpFile.mkdirs();
-    try {
-      log.info(tmpFile.getAbsolutePath() + " isFile: " + tmpFile.isFile() + " isDir:" + tmpFile.isDirectory());
-
-      File mergedFile = indexMergerV9.mergeQueryableIndex(
-          indexesToMerge,
-          rollup,
-          schemaInfo.getAggsArray(),
-          tmpFile,
-          new IndexSpec(),
-          null
-      );
-
-      blackhole.consume(mergedFile);
+    List<QueryableIndex> qIndexesToMerge = new ArrayList<>();
+    for (File f : indexesToMerge) {
+      QueryableIndex qIndex = INDEX_IO.loadIndex(f);
+      qIndexesToMerge.add(qIndex);
     }
-    finally {
-      tmpFile.delete();
-    }
-  }
 
-  @TearDown
-  public void tearDown() throws IOException
-  {
-    FileUtils.deleteDirectory(tmpDir);
+    File mergedFile = indexMergerV9.mergeQueryableIndex(
+        qIndexesToMerge,
+        rollup,
+        schemaInfo.getAggsArray(),
+        mergeTmpFile,
+        new IndexSpec(),
+        null
+    );
+
+    blackhole.consume(mergedFile);
   }
 
   public enum SegmentWriteOutType
@@ -221,5 +237,28 @@ public class IndexMergeBenchmark
         .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
         .buildOnheap();
+  }
+
+  public static void main(String[] args) throws RunnerException
+  {
+    for (MemoryPoolMXBean mpBean : ManagementFactory.getMemoryPoolMXBeans()) {
+      log.info("Name: %s: %s", mpBean.getName(), mpBean.getUsage());
+    }
+
+    log.info("Max direct memory: %s", VM.maxDirectMemory());
+
+    Options opt = new OptionsBuilder()
+        .include(IndexMergeBenchmark.class.getSimpleName() + ".mergeV9$")
+        .warmupIterations(3)
+        .measurementIterations(10)
+        .forks(0)
+        .threads(1)
+        .param("rollup", "false")
+        .param("rowsPerSegment", "50000")
+        .param("numSegments", "4")
+        // .param("rowsPerSegment", "1000000")
+        .build();
+
+    new Runner(opt).run();
   }
 }

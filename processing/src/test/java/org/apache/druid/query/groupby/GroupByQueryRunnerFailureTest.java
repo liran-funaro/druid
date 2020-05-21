@@ -43,6 +43,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.junit.AfterClass;
 import org.junit.Rule;
@@ -60,7 +61,7 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 @RunWith(Parameterized.class)
-public class GroupByQueryRunnerFailureTest
+public class GroupByQueryRunnerFailureTest extends InitializedNullHandlingTest
 {
   private static final DruidProcessingConfig DEFAULT_PROCESSING_CONFIG = new DruidProcessingConfig()
   {

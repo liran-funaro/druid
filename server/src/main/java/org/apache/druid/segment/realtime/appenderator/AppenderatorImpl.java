@@ -77,6 +77,8 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.StandardOpenOption;
@@ -224,7 +226,9 @@ public class AppenderatorImpl implements Appenderator
   private void throwPersistErrorIfExists()
   {
     if (persistError != null) {
-      throw new RE(persistError, "Error while persisting");
+      StringWriter trace = new StringWriter();
+      persistError.printStackTrace(new PrintWriter(trace));
+      throw new RE(persistError, "Error while persisting: %s", trace.toString());
     }
   }
 

@@ -85,6 +85,10 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -492,5 +496,25 @@ public class ScanBenchmark
     );
     List<Result<ScanResultValue>> results = queryResult.toList();
     blackhole.consume(results);
+  }
+
+  public static void main(String[] args) throws RunnerException
+  {
+    Options opt = new OptionsBuilder()
+        .include(ScanBenchmark.class.getSimpleName())
+        .warmupIterations(1)
+        .measurementIterations(2)
+        // .measurementTime(TimeValue.NONE)
+        .forks(0)
+        .threads(1)
+        .param("indexType", "onheap")
+        .param("ordering", "NONE")
+        .param("limit", "1000")
+        .param("schemaAndQuery", "basic.A")
+        .param("rowsPerSegment", "5000")
+        .param("numSegments", "2")
+        .build();
+
+    new Runner(opt).run();
   }
 }
