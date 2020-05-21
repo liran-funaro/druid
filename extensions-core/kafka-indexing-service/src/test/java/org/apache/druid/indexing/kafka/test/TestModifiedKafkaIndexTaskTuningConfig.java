@@ -37,6 +37,7 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
 
   @JsonCreator
   public TestModifiedKafkaIndexTaskTuningConfig(
+      @JsonProperty("incrementalIndexType") @Nullable String incrementalIndexType,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
@@ -60,6 +61,7 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
   )
   {
     super(
+        incrementalIndexType,
         maxRowsInMemory,
         maxBytesInMemory,
         maxRowsPerSegment,
