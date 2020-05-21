@@ -63,6 +63,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final DataSchema schema;
   private final ShardSpec shardSpec;
   private final String version;
+  private final String incrementalIndexType;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<>();
@@ -79,6 +80,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       DataSchema schema,
       ShardSpec shardSpec,
       String version,
+      String incrementalIndexType,
       int maxRowsInMemory,
       long maxBytesInMemory,
       String dedupColumn
@@ -89,6 +91,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         schema,
         shardSpec,
         version,
+        incrementalIndexType,
         maxRowsInMemory,
         maxBytesInMemory,
         dedupColumn,
@@ -101,6 +104,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       DataSchema schema,
       ShardSpec shardSpec,
       String version,
+      String incrementalIndexType,
       int maxRowsInMemory,
       long maxBytesInMemory,
       String dedupColumn,
@@ -111,6 +115,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     this.shardSpec = shardSpec;
     this.interval = interval;
     this.version = version;
+    this.incrementalIndexType = incrementalIndexType;
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxBytesInMemory = maxBytesInMemory;
     this.dedupColumn = dedupColumn;
@@ -326,7 +331,8 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         .setIndexSchema(indexSchema)
         .setMaxRowCount(maxRowsInMemory)
         .setMaxBytesInMemory(maxBytesInMemory)
-        .buildOnheap();
+        .setIncrementalIndexType(incrementalIndexType)
+        .build();
 
     final FireHydrant old;
     synchronized (hydrantLock) {

@@ -50,7 +50,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -305,8 +304,9 @@ public class IndexGeneratorJob implements Jobby
     IncrementalIndex newIndex = new IncrementalIndex.Builder()
         .setIndexSchema(indexSchema)
         .setMaxRowCount(tuningConfig.getRowFlushBoundary())
-        .setMaxBytesInMemory(TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()))
-        .buildOnheap();
+        .setMaxBytesInMemory(tuningConfig.getMaxBytesInMemoryOrDefault())
+        .setIncrementalIndexType(tuningConfig.getIncrementalIndexType())
+        .build();
 
     if (oldDimOrder != null && !indexSchema.getDimensionsSpec().hasCustomDimensions()) {
       newIndex.loadDimensionIterable(oldDimOrder, oldCapabilities);
