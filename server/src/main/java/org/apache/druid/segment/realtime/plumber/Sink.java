@@ -63,6 +63,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final DataSchema schema;
   private final ShardSpec shardSpec;
   private final String version;
+  private final String incrementalIndexType;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final boolean reportParseExceptions;
@@ -79,6 +80,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       DataSchema schema,
       ShardSpec shardSpec,
       String version,
+      String incrementalIndexType,
       int maxRowsInMemory,
       long maxBytesInMemory,
       boolean reportParseExceptions,
@@ -90,6 +92,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         schema,
         shardSpec,
         version,
+        incrementalIndexType,
         maxRowsInMemory,
         maxBytesInMemory,
         reportParseExceptions,
@@ -103,6 +106,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       DataSchema schema,
       ShardSpec shardSpec,
       String version,
+      String incrementalIndexType,
       int maxRowsInMemory,
       long maxBytesInMemory,
       boolean reportParseExceptions,
@@ -114,6 +118,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     this.shardSpec = shardSpec;
     this.interval = interval;
     this.version = version;
+    this.incrementalIndexType = incrementalIndexType;
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxBytesInMemory = maxBytesInMemory;
     this.reportParseExceptions = reportParseExceptions;
@@ -331,7 +336,8 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         .setReportParseExceptions(reportParseExceptions)
         .setMaxRowCount(maxRowsInMemory)
         .setMaxBytesInMemory(maxBytesInMemory)
-        .buildOnheap();
+        .setIncrementalIndexType(incrementalIndexType)
+        .build();
 
     final FireHydrant old;
     synchronized (hydrantLock) {

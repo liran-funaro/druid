@@ -2745,6 +2745,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     boolean resetOffsetAutomatically = false;
     int maxRowsInMemory = 1000;
     final KinesisIndexTaskTuningConfig tuningConfig = new KinesisIndexTaskTuningConfig(
+        null,
         maxRowsInMemory,
         null,
         maxRowsPerSegment,

@@ -37,6 +37,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
 
   @JsonCreator
   public TestModifiedKinesisIndexTaskTuningConfig(
+      @JsonProperty("incrementalIndexType") @Nullable String incrementalIndexType,
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
@@ -66,6 +67,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
   )
   {
     super(
+        incrementalIndexType,
         maxRowsInMemory,
         maxBytesInMemory,
         maxRowsPerSegment,
@@ -98,6 +100,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
   public TestModifiedKinesisIndexTaskTuningConfig(KinesisIndexTaskTuningConfig base, String extra)
   {
     super(
+        base.getIncrementalIndexType(),
         base.getMaxRowsInMemory(),
         base.getMaxBytesInMemory(),
         base.getMaxRowsPerSegment(),

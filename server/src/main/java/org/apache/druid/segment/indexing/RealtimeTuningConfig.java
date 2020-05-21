@@ -65,6 +65,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   public static RealtimeTuningConfig makeDefaultTuningConfig(final @Nullable File basePersistDirectory)
   {
     return new RealtimeTuningConfig(
+        DEFAULT_INCREMENTAL_INDEX_TYPE,
         DEFAULT_MAX_ROWS_IN_MEMORY,
         0L,
         DEFAULT_INTERMEDIATE_PERSIST_PERIOD,
@@ -87,6 +88,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     );
   }
 
+  private final String incrementalIndexType;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final Period intermediatePersistPeriod;
@@ -110,6 +112,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
 
   @JsonCreator
   public RealtimeTuningConfig(
+      @JsonProperty("incrementalIndexType") @Nullable String incrementalIndexType,
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
@@ -132,6 +135,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("dedupColumn") @Nullable String dedupColumn
   )
   {
+    this.incrementalIndexType = incrementalIndexType == null ? DEFAULT_INCREMENTAL_INDEX_TYPE : incrementalIndexType;
     this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
     // initializing this to 0, it will be lazily initialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
@@ -164,6 +168,13 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     this.dedupColumn = dedupColumn == null ? DEFAULT_DEDUP_COLUMN : dedupColumn;
+  }
+
+  @Override
+  @JsonProperty
+  public String getIncrementalIndexType()
+  {
+    return incrementalIndexType;
   }
 
   @Override
@@ -304,6 +315,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
   {
     return new RealtimeTuningConfig(
+        incrementalIndexType,
         maxRowsInMemory,
         maxBytesInMemory,
         intermediatePersistPeriod,
@@ -330,6 +342,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   public RealtimeTuningConfig withBasePersistDirectory(File dir)
   {
     return new RealtimeTuningConfig(
+        incrementalIndexType,
         maxRowsInMemory,
         maxBytesInMemory,
         intermediatePersistPeriod,

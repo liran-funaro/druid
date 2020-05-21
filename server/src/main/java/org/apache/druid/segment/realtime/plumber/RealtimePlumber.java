@@ -61,7 +61,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
@@ -261,8 +260,9 @@ public class RealtimePlumber implements Plumber
           schema,
           config.getShardSpec(),
           versioningPolicy.getVersion(sinkInterval),
+          config.getIncrementalIndexType(),
           config.getMaxRowsInMemory(),
-          TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
+          config.getMaxBytesInMemoryOrDefault(),
           config.isReportParseExceptions(),
           config.getDedupColumn()
       );
@@ -725,8 +725,9 @@ public class RealtimePlumber implements Plumber
           schema,
           config.getShardSpec(),
           versioningPolicy.getVersion(sinkInterval),
+          config.getIncrementalIndexType(),
           config.getMaxRowsInMemory(),
-          TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
+          config.getMaxBytesInMemoryOrDefault(),
           config.isReportParseExceptions(),
           config.getDedupColumn(),
           hydrants

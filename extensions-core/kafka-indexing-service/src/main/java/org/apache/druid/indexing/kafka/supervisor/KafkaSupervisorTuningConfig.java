@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -67,11 +66,13 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
 
   public KafkaSupervisorTuningConfig(
+      @JsonProperty("incrementalIndexType") @Nullable String incrementalIndexType,
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
@@ -100,6 +101,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   )
   {
     super(
+        incrementalIndexType,
         maxRowsInMemory,
         maxBytesInMemory,
         maxRowsPerSegment,
@@ -193,7 +195,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
            "maxRowsInMemory=" + getMaxRowsInMemory() +
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", maxTotalRows=" + getMaxTotalRows() +
-           ", maxBytesInMemory=" + TuningConfigs.getMaxBytesInMemoryOrDefault(getMaxBytesInMemory()) +
+           ", maxBytesInMemory=" + getMaxBytesInMemoryOrDefault() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
            ", basePersistDirectory=" + getBasePersistDirectory() +
            ", maxPendingPersists=" + getMaxPendingPersists() +
@@ -219,6 +221,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   public KafkaIndexTaskTuningConfig convertToTaskTuningConfig()
   {
     return new KafkaIndexTaskTuningConfig(
+        getIncrementalIndexType(),
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
         getMaxRowsPerSegment(),

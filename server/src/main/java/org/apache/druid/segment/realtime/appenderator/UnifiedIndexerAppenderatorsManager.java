@@ -373,6 +373,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     }
 
     @Override
+    public String getIncrementalIndexType()
+    {
+      return baseConfig.getIncrementalIndexType();
+    }
+
+    @Override
     public int getMaxRowsInMemory()
     {
       return Integer.MAX_VALUE; // unlimited, rely on maxBytesInMemory instead

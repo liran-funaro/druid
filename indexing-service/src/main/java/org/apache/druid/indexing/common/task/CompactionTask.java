@@ -216,6 +216,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       return new ParallelIndexTuningConfig(
           null,
           indexTuningConfig.getMaxRowsPerSegment(),
+          indexTuningConfig.getIncrementalIndexType(),
           indexTuningConfig.getMaxRowsPerSegment(),
           indexTuningConfig.getMaxBytesInMemory(),
           indexTuningConfig.getMaxTotalRows(),
