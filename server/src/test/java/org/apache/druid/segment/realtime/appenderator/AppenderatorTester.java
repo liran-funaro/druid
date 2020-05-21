@@ -149,6 +149,7 @@ public class AppenderatorTester implements AutoCloseable
     );
     maxSizeInBytes = maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes;
     tuningConfig = new RealtimeTuningConfig(
+        null,
         maxRowsInMemory,
         maxSizeInBytes,
         null,

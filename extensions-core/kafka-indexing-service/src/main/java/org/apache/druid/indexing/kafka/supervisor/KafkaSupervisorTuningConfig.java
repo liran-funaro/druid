@@ -67,11 +67,13 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
 
   public KafkaSupervisorTuningConfig(
+      @JsonProperty("incrementalIndexType") @Nullable String incrementalIndexType,
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
@@ -100,6 +102,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   )
   {
     super(
+        incrementalIndexType,
         maxRowsInMemory,
         maxBytesInMemory,
         maxRowsPerSegment,
@@ -219,6 +222,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   public KafkaIndexTaskTuningConfig convertToTaskTuningConfig()
   {
     return new KafkaIndexTaskTuningConfig(
+        getIncrementalIndexType(),
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
         getMaxRowsPerSegment(),

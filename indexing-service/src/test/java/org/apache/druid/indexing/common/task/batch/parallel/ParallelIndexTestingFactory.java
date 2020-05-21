@@ -155,6 +155,7 @@ class ParallelIndexTestingFactory
       return new ParallelIndexTuningConfig(
           1,
           null,
+          null,
           3,
           4L,
           5L,

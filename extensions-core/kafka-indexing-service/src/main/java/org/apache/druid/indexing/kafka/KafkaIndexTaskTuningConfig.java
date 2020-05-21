@@ -33,6 +33,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
 {
   @JsonCreator
   public KafkaIndexTaskTuningConfig(
+      @JsonProperty("incrementalIndexType") @Nullable String incrementalIndexType,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
@@ -55,6 +56,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
   )
   {
     super(
+        incrementalIndexType,
         maxRowsInMemory,
         maxBytesInMemory,
         maxRowsPerSegment,
@@ -81,6 +83,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
   public KafkaIndexTaskTuningConfig withBasePersistDirectory(File dir)
   {
     return new KafkaIndexTaskTuningConfig(
+        getIncrementalIndexType(),
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
         getMaxRowsPerSegment(),

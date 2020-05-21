@@ -50,6 +50,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
 
   @JsonCreator
   public KinesisIndexTaskTuningConfig(
+      @JsonProperty("incrementalIndexType") @Nullable String incrementalIndexType,
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
@@ -78,6 +79,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
   )
   {
     super(
+        incrementalIndexType,
         maxRowsInMemory,
         maxBytesInMemory,
         maxRowsPerSegment,
@@ -154,6 +156,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
   public KinesisIndexTaskTuningConfig withBasePersistDirectory(File dir)
   {
     return new KinesisIndexTaskTuningConfig(
+        getIncrementalIndexType(),
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
         getMaxRowsPerSegment(),
