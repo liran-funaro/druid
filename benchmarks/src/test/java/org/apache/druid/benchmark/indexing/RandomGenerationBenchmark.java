@@ -21,14 +21,9 @@ package org.apache.druid.benchmark.indexing;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
-import org.apache.druid.segment.incremental.IncrementalIndex;
-import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.serde.ComplexMetrics;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -47,118 +42,79 @@ import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
-import org.openjdk.jmh.runner.options.TimeValue;
 
-import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 10)
 @Measurement(iterations = 25)
-public class IndexIngestionBenchmark
+public class RandomGenerationBenchmark
 {
-  @Param({"75000"})
+  @Param({"2000000"})
   private int rowsPerSegment;
 
   @Param({"basic"})
   private String schema;
 
-  @Param({"true", "false"})
-  private boolean rollup;
-
-  @Param({"0", "1000", "10000"})
+  @Param({"0", "1", "10", "100", "1000", "10000"})
   private int rollupOpportunity;
 
-  @Param({"onheap", "offheap", "oak"})
-  private String indexType;
-
-  private static final Logger log = new Logger(IndexIngestionBenchmark.class);
   private static final int RNG_SEED = 9999;
 
   static {
     NullHandling.initializeForTests();
   }
 
-  private IncrementalIndex incIndex;
-  private ArrayList<InputRow> rows;
   private GeneratorSchemaInfo schemaInfo;
+  private DataGenerator gen;
 
   @Setup
   public void setup()
   {
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
-
-    rows = new ArrayList<>();
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
+  }
 
-    DataGenerator gen = new DataGenerator(
+  @Setup(Level.Invocation)
+  public void setup2()
+  {
+    gen = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval().getStartMillis(),
         rollupOpportunity,
         1000.0
     );
-
-    for (int i = 0; i < rowsPerSegment; i++) {
-      InputRow row = gen.nextRow();
-      if (i % 10000 == 0) {
-        log.info(i + " rows generated.");
-      }
-      rows.add(row);
-    }
-  }
-
-  @Setup(Level.Invocation)
-  public void setup2()
-  {
-    incIndex = makeIncIndex();
   }
 
   @TearDown(Level.Invocation)
   public void tearDown()
   {
-    incIndex.close();
-  }
-
-  private IncrementalIndex makeIncIndex()
-  {
-    return new IncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withMetrics(schemaInfo.getAggsArray())
-                .withRollup(rollup)
-                .build()
-        )
-        .setReportParseExceptions(false)
-        .setMaxRowCount(rowsPerSegment * 2)
-        .build(indexType);
+    gen = null;
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void addRows(Blackhole blackhole) throws Exception
+  public void generate(Blackhole blackhole)
   {
     for (int i = 0; i < rowsPerSegment; i++) {
-      InputRow row = rows.get(i);
-      int rv = incIndex.add(row).getRowCount();
-      blackhole.consume(rv);
+      InputRow row = gen.nextRow();
+      blackhole.consume(row);
     }
   }
 
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(IndexIngestionBenchmark.class.getSimpleName() + ".addRows$")
-        .warmupIterations(0)
-        .measurementIterations(1).measurementTime(TimeValue.NONE)
+        .include(RandomGenerationBenchmark.class.getSimpleName() + ".generate$")
+        .warmupIterations(3)
+        .measurementIterations(10)
         .forks(0)
         .threads(1)
-        .param("indexType", "oak")
-        .param("rollup", "true")
-        .param("rollupOpportunity", "10000")
-        .param("rowsPerSegment", "100000")
+        .param("rollupOpportunity", "0")
+        .param("rowsPerSegment", "1000000")
+        // .param("rowsPerSegment", "1000000")
         .build();
 
     new Runner(opt).run();

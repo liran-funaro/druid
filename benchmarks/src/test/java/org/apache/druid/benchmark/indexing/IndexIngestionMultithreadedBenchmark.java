@@ -19,23 +19,17 @@
 
 package org.apache.druid.benchmark.indexing;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
-import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
-import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -55,59 +49,44 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 10)
 @Measurement(iterations = 25)
-public class IndexPersistBenchmark
+public class IndexIngestionMultithreadedBenchmark
 {
-  public static final ObjectMapper JSON_MAPPER;
-  private static final Logger log = new Logger(IndexPersistBenchmark.class);
-  private static final int RNG_SEED = 9999;
-  private static final IndexMergerV9 INDEX_MERGER_V9;
-  private static final IndexIO INDEX_IO;
-
-  static {
-    NullHandling.initializeForTests();
-    JSON_MAPPER = new DefaultObjectMapper();
-    INDEX_IO = new IndexIO(
-        JSON_MAPPER,
-        () -> 0
-    );
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
-  }
-
   @Param({"75000"})
   private int rowsPerSegment;
 
-  @Param({"rollo"})
+  @Param({"basic"})
   private String schema;
 
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"0", "1000", "10000"})
-  private int rollupOpportunity;
-
   @Param({"onheap", "offheap", "oak"})
   private String indexType;
+
+  private static final Logger log = new Logger(IndexIngestionBenchmark.class);
+  private static final int RNG_SEED = 9999;
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   private IncrementalIndex incIndex;
   private ArrayList<InputRow> rows;
   private GeneratorSchemaInfo schemaInfo;
-  private File tmpDir;
+  AtomicInteger threadIdAllocator = new AtomicInteger(0);
 
   @Setup
   public void setup()
   {
-    log.info("SETUP CALLED AT " + System.currentTimeMillis());
-
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
 
     rows = new ArrayList<InputRow>();
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
@@ -115,9 +94,8 @@ public class IndexPersistBenchmark
     DataGenerator gen = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
-        schemaInfo.getDataInterval().getStartMillis(),
-        rollupOpportunity,
-        1000.0
+        schemaInfo.getDataInterval(),
+        rowsPerSegment
     );
 
     for (int i = 0; i < rowsPerSegment; i++) {
@@ -125,37 +103,33 @@ public class IndexPersistBenchmark
       if (i % 10000 == 0) {
         log.info(i + " rows generated.");
       }
+
       rows.add(row);
     }
   }
 
-  @Setup(Level.Iteration)
-  public void setup2() throws IOException
+  @State(Scope.Thread)
+  public static class ThreadState
   {
-    incIndex = makeIncIndex();
-    for (int i = 0; i < rowsPerSegment; i++) {
-      InputRow row = rows.get(i);
-      incIndex.add(row);
+    int id = 0;
+
+    @Setup
+    public void setup(IndexIngestionMultithreadedBenchmark globalState)
+    {
+      id = globalState.threadIdAllocator.getAndIncrement();
     }
   }
 
+  @Setup(Level.Invocation)
+  public void setup2()
+  {
+    incIndex = makeIncIndex();
+  }
+
   @TearDown(Level.Iteration)
-  public void teardown()
+  public void tearDown()
   {
     incIndex.close();
-    incIndex = null;
-  }
-
-  @Setup(Level.Invocation)
-  public void setupTemp()
-  {
-    tmpDir = FileUtils.createTempDir();
-  }
-
-  @TearDown(Level.Invocation)
-  public void teardownTemp() throws IOException
-  {
-    FileUtils.deleteDirectory(tmpDir);
   }
 
   private IncrementalIndex makeIncIndex()
@@ -168,37 +142,31 @@ public class IndexPersistBenchmark
                 .build()
         )
         .setReportParseExceptions(false)
-        .setMaxRowCount(rowsPerSegment)
+        .setMaxRowCount(rowsPerSegment * 2)
         .build(indexType);
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
+  @BenchmarkMode(Mode.SingleShotTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void persistV9(Blackhole blackhole) throws Exception
+  public void addRows(Blackhole blackhole, ThreadState threadState) throws Exception
   {
-    File indexFile = INDEX_MERGER_V9.persist(
-        incIndex,
-        tmpDir,
-        new IndexSpec(),
-        null
-    );
-
-    blackhole.consume(indexFile);
+    int threads = threadIdAllocator.get();
+    for (int i = threadState.id; i < rowsPerSegment; i += threads) {
+      InputRow row = rows.get(i);
+      int rv = incIndex.add(row).getRowCount();
+      blackhole.consume(rv);
+    }
   }
 
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(IndexPersistBenchmark.class.getSimpleName() + ".persistV9$")
-        .warmupIterations(3)
-        .measurementIterations(10)
-        // .measurementTime(TimeValue.NONE)
-        .forks(0)
-        .threads(1)
+        .include(IndexIngestionMultithreadedBenchmark.class.getSimpleName() + ".add$")
+        .forks(1)
+        .threads(4)
         .param("indexType", "oak")
-        .param("rollup", "true")
-        .param("rollupOpportunity", "0")
+        .param("rollup", "false")
         .param("rowsPerSegment", "1000000")
         .build();
 

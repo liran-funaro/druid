@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.IndexableAdapter;
@@ -29,6 +31,7 @@ import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.IncrementalIndexTest;
+import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -193,6 +196,59 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
     Assert.assertEquals(6, rowStrings.size());
     for (int i = 0; i < 6; i++) {
       Assert.assertEquals(getExpected.apply(i), rowStrings.get(i));
+    }
+  }
+
+  public static void myPopulateIndex(long timestamp, IncrementalIndex index, int a) throws IndexSizeExceededException
+  {
+    index.add(
+            new MapBasedInputRow(
+                    timestamp,
+                    Arrays.asList("dim1", "dim2"),
+                    ImmutableMap.of("dim1", "1:" + a, "dim2", "2:" + a)
+            )
+    );
+
+    index.add(
+            new MapBasedInputRow(
+                    timestamp,
+                    Arrays.asList("dim1", "dim2"),
+                    ImmutableMap.of("dim1", "1:" + (a + 1), "dim2", "2:" + (a + 1))
+            )
+    );
+  }
+
+  @Test
+  public void testGetRowsStringDim() throws Exception
+  {
+    final long timestamp = System.currentTimeMillis();
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createNoRollupIndex(indexType, null);
+    myPopulateIndex(timestamp, toPersist1, 1);
+    myPopulateIndex(timestamp, toPersist1, 20);
+    myPopulateIndex(timestamp, toPersist1, 30);
+
+    for (IncrementalIndexRow row : toPersist1.getFacts().keySet()) {
+      int[] dim1 = (int[]) row.getDim(0);
+      System.err.println("DIM 1: " + Arrays.toString(dim1));
+      IndexedInts str1 = row.getStringDim(0);
+
+      if (str1 != null) {
+        Assert.assertEquals(dim1.length, str1.size());
+        for (int i = 0; i < dim1.length; i++) {
+          Assert.assertEquals(dim1[i], str1.get(i));
+        }
+      }
+
+      int[] dim2 = (int[]) row.getDim(1);
+      System.err.println("DIM 2: " + Arrays.toString(dim2));
+      IndexedInts str2 = row.getStringDim(1);
+
+      if (str2 != null) {
+        Assert.assertEquals(dim2.length, str2.size());
+        for (int i = 0; i < dim2.length; i++) {
+          Assert.assertEquals(dim2[i], str2.get(i));
+        }
+      }
     }
   }
 }

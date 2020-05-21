@@ -92,6 +92,11 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
+import org.openjdk.jmh.runner.options.TimeValue;
 
 import java.io.File;
 import java.io.IOException;
@@ -509,5 +514,21 @@ public class SearchBenchmark
     );
     List<Result<SearchResultValue>> results = queryResult.toList();
     blackhole.consume(results);
+  }
+
+  public static void main(String[] args) throws RunnerException
+  {
+    Options opt = new OptionsBuilder()
+        .include(SearchBenchmark.class.getSimpleName() + ".querySingleIncrementalIndex$")
+        .warmupIterations(0)
+        .measurementTime(TimeValue.NONE)
+        .measurementIterations(1)
+        .forks(0)
+        .threads(1)
+        .param("indexType", "oak")
+        .param("rowsPerSegment", "100")
+        .build();
+
+    new Runner(opt).run();
   }
 }

@@ -116,7 +116,6 @@ public class FilterPartitionBenchmark
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
-  private IncrementalIndex incIndex;
   private QueryableIndex qIndex;
   private File indexFile;
   private File tmpDir;
@@ -162,7 +161,7 @@ public class FilterPartitionBenchmark
         rowsPerSegment
     );
 
-    incIndex = makeIncIndex();
+    IncrementalIndex incIndex = makeIncIndex();
 
     for (int j = 0; j < rowsPerSegment; j++) {
       InputRow row = gen.nextRow();
