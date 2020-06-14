@@ -21,7 +21,6 @@ package org.apache.druid.segment.incremental;
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import com.yahoo.oak.OakBuffer;
 import com.yahoo.oak.OakComparator;
 import com.yahoo.oak.OakScopedReadBuffer;
 import com.yahoo.oak.OakScopedWriteBuffer;
@@ -32,10 +31,9 @@ import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
-import sun.misc.Unsafe;
 
 import javax.annotation.Nullable;
-import java.lang.reflect.Constructor;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -90,45 +88,23 @@ public final class OakKey
   // Marks a null dimension
   static final int NULL_DIM = -1;
 
-  // Used for direct access to the key's buffer
-  static final Unsafe UNSAFE;
-  static final long INT_ARRAY_OFFSET;
-
-  // static constructor - access and create a new instance of Unsafe
-  static {
-    try {
-      Constructor<Unsafe> unsafeConstructor = Unsafe.class.getDeclaredConstructor();
-      unsafeConstructor.setAccessible(true);
-      UNSAFE = unsafeConstructor.newInstance();
-      INT_ARRAY_OFFSET = UNSAFE.arrayBaseOffset(int[].class);
-    }
-    catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
-  }
-
   private OakKey()
   {
   }
 
-  static long getKeyAddress(OakBuffer buffer)
+  static long getTimestamp(ByteBuffer buffer, int offset)
   {
-    return ((OakUnsafeDirectBuffer) buffer).getAddress();
+    return buffer.getLong(offset + TIME_STAMP_OFFSET);
   }
 
-  static long getTimestamp(long address)
+  static int getRowIndex(ByteBuffer buffer, int offset)
   {
-    return UNSAFE.getLong(address + TIME_STAMP_OFFSET);
+    return buffer.getInt(offset + ROW_INDEX_OFFSET);
   }
 
-  static int getRowIndex(long address)
+  static int getDimsLength(ByteBuffer buffer, int offset)
   {
-    return UNSAFE.getInt(address + ROW_INDEX_OFFSET);
-  }
-
-  static int getDimsLength(long address)
-  {
-    return UNSAFE.getInt(address + DIMS_LENGTH_OFFSET);
+    return buffer.getInt(offset + DIMS_LENGTH_OFFSET);
   }
 
   static int getDimOffsetInBuffer(int dimIndex)
@@ -136,18 +112,18 @@ public final class OakKey
     return DIMS_OFFSET + (dimIndex * SIZE_PER_DIM);
   }
 
-  static boolean isDimNull(long address, int dimIndex)
+  static boolean isDimNull(ByteBuffer buffer, int offset, int dimIndex)
   {
     int dimIndexInBuffer = getDimOffsetInBuffer(dimIndex);
-    return UNSAFE.getInt(address + dimIndexInBuffer) == NULL_DIM;
+    return buffer.getInt(offset + dimIndexInBuffer) == NULL_DIM;
   }
 
   @Nullable
-  static Object getDim(long address, int dimIndex)
+  static Object getDim(ByteBuffer buffer, int offset, int dimIndex)
   {
     int dimIndexInBuffer = getDimOffsetInBuffer(dimIndex);
-    long dimAddress = address + dimIndexInBuffer;
-    int dimValueTypeID = UNSAFE.getInt(dimAddress + DIM_VALUE_TYPE_OFFSET);
+    int dimOffset = offset + dimIndexInBuffer;
+    int dimValueTypeID = buffer.getInt(dimOffset + DIM_VALUE_TYPE_OFFSET);
 
     if (dimValueTypeID < 0 || dimValueTypeID >= VALUE_ORDINAL_TYPES.length) {
       return null;
@@ -155,26 +131,28 @@ public final class OakKey
 
     switch (VALUE_ORDINAL_TYPES[dimValueTypeID]) {
       case DOUBLE:
-        return UNSAFE.getDouble(dimAddress + DIM_DATA_OFFSET);
+        return buffer.getDouble(dimOffset + DIM_DATA_OFFSET);
       case FLOAT:
-        return UNSAFE.getFloat(dimAddress + DIM_DATA_OFFSET);
+        return buffer.getFloat(dimOffset + DIM_DATA_OFFSET);
       case LONG:
-        return UNSAFE.getLong(dimAddress + DIM_DATA_OFFSET);
+        return buffer.getLong(dimOffset + DIM_DATA_OFFSET);
       case STRING:
-        int arrayPos = UNSAFE.getInt(dimAddress + STRING_DIM_ARRAY_POS_OFFSET);
-        int arraySize = UNSAFE.getInt(dimAddress + STRING_DIM_ARRAY_LENGTH_OFFSET);
+        int arrayPos = buffer.getInt(dimOffset + STRING_DIM_ARRAY_POS_OFFSET);
+        int arraySize = buffer.getInt(dimOffset + STRING_DIM_ARRAY_LENGTH_OFFSET);
         int[] array = new int[arraySize];
-        UNSAFE.copyMemory(null, address + arrayPos, array, INT_ARRAY_OFFSET, ((long) arraySize) * Integer.BYTES);
+        for (int i = 0; i < arraySize; i++) {
+          array[i] = buffer.getInt(offset + arrayPos + i * Integer.BYTES);
+        }
         return array;
       default:
         return null;
     }
   }
 
-  static Object[] getAllDims(long address)
+  static Object[] getAllDims(ByteBuffer buffer, int offset)
   {
-    int dimsLength = getDimsLength(address);
-    return IntStream.range(0, dimsLength).mapToObj(dimIndex -> getDim(address, dimIndex)).toArray();
+    int dimsLength = getDimsLength(buffer, offset);
+    return IntStream.range(0, dimsLength).mapToObj(dimIndex -> getDim(buffer, offset, dimIndex)).toArray();
   }
 
   /**
@@ -182,18 +160,18 @@ public final class OakKey
    *
    * @return long estimated bytes in memory of the key
    */
-  static long getTotalDimSize(long address)
+  static long getTotalDimSize(ByteBuffer buffer, int offset)
   {
-    int dimsLength = getDimsLength(address);
+    int dimsLength = getDimsLength(buffer, offset);
     long sizeInBytes = getDimOffsetInBuffer(dimsLength);
 
     // String dimentions take additional space to store the int array.
     // So we look for such dimentions and add up their array sizes.
     for (int dimIndex = 0; dimIndex < dimsLength; dimIndex++) {
-      long dimAddress = address + getDimOffsetInBuffer(dimIndex);
-      int dimType = UNSAFE.getInt(dimAddress + DIM_VALUE_TYPE_OFFSET);
+      int dimOffset = offset + getDimOffsetInBuffer(dimIndex);
+      int dimType = buffer.getInt(dimOffset + DIM_VALUE_TYPE_OFFSET);
       if (dimType == ValueType.STRING.ordinal()) {
-        int arraySize = UNSAFE.getInt(dimAddress + STRING_DIM_ARRAY_LENGTH_OFFSET);
+        int arraySize = buffer.getInt(dimOffset + STRING_DIM_ARRAY_LENGTH_OFFSET);
         sizeInBytes += ((long) arraySize) * Integer.BYTES;
       }
     }
@@ -207,22 +185,25 @@ public final class OakKey
    */
   public static class StringDim implements IndexedInts
   {
-    long dimensionsAddress;
+    ByteBuffer dimensionsBuffer;
+    int dimensionsOffset;
     int dimIndex;
     boolean initialized;
     int arraySize;
-    long arrayAddress;
+    int arrayOffset;
 
-    public StringDim(long dimensionsAddress)
+    public StringDim(ByteBuffer buffer, int offset)
     {
-      this.dimensionsAddress = dimensionsAddress;
+      this.dimensionsBuffer = buffer;
+      this.dimensionsOffset = offset;
       dimIndex = -1;
       initialized = false;
     }
 
-    public void reset(long dimensions)
+    public void reset(ByteBuffer buffer, int offset)
     {
-      this.dimensionsAddress = dimensions;
+      this.dimensionsBuffer = buffer;
+      this.dimensionsOffset = offset;
       dimIndex = -1;
       initialized = false;
     }
@@ -239,9 +220,9 @@ public final class OakKey
         return;
       }
 
-      long dimAddress = this.dimensionsAddress + getDimOffsetInBuffer(dimIndex);
-      arrayAddress = dimensionsAddress + UNSAFE.getInt(dimAddress + STRING_DIM_ARRAY_POS_OFFSET);
-      arraySize = UNSAFE.getInt(dimAddress + STRING_DIM_ARRAY_LENGTH_OFFSET);
+      int dimOffset = this.dimensionsOffset + getDimOffsetInBuffer(dimIndex);
+      arrayOffset = dimensionsOffset + dimensionsBuffer.getInt(dimOffset + STRING_DIM_ARRAY_POS_OFFSET);
+      arraySize = dimensionsBuffer.getInt(dimOffset + STRING_DIM_ARRAY_LENGTH_OFFSET);
       initialized = true;
     }
 
@@ -262,7 +243,7 @@ public final class OakKey
     public int get(int index)
     {
       init();
-      return UNSAFE.getInt(arrayAddress + ((long) index) * Integer.BYTES);
+      return dimensionsBuffer.getInt(arrayOffset + (index * Integer.BYTES));
     }
 
     @Override
@@ -297,9 +278,11 @@ public final class OakKey
     }
 
     @Override
-    public void serialize(IncrementalIndexRow incrementalIndexRow, OakScopedWriteBuffer buffer)
+    public void serialize(IncrementalIndexRow incrementalIndexRow, OakScopedWriteBuffer oakBuffer)
     {
-      long address = getKeyAddress(buffer);
+      final OakUnsafeDirectBuffer oakDirectBuffer = (OakUnsafeDirectBuffer) oakBuffer;
+      final ByteBuffer buffer = oakDirectBuffer.getByteBuffer();
+      final int offset = oakDirectBuffer.getOffset();
 
       long timestamp = incrementalIndexRow.getTimestamp();
       int dimsLength = incrementalIndexRow.getDimsLength();
@@ -308,11 +291,11 @@ public final class OakKey
         rowIndex = rowIndexGenerator.getAndIncrement();
         incrementalIndexRow.setRowIndex(rowIndex);
       }
-      UNSAFE.putLong(address + TIME_STAMP_OFFSET, timestamp);
-      UNSAFE.putInt(address + DIMS_LENGTH_OFFSET, dimsLength);
-      UNSAFE.putInt(address + ROW_INDEX_OFFSET, rowIndex);
+      buffer.putLong(offset + TIME_STAMP_OFFSET, timestamp);
+      buffer.putInt(offset + DIMS_LENGTH_OFFSET, dimsLength);
+      buffer.putInt(offset + ROW_INDEX_OFFSET, rowIndex);
 
-      long dimsAddress = address + DIMS_OFFSET;
+      int dimsOffset = offset + DIMS_OFFSET;
       // the index for writing the int arrays of the string-dim (after all the dims' data)
       int stringDimArraysPos = getDimOffsetInBuffer(dimsLength);
 
@@ -322,45 +305,50 @@ public final class OakKey
         boolean isDimHaveValue = dimValueType != null;
 
         int dimValueTypeID = isDimHaveValue ? dimValueType.ordinal() : NULL_DIM;
-        UNSAFE.putInt(dimsAddress + DIM_VALUE_TYPE_OFFSET, dimValueTypeID);
+        buffer.putInt(dimsOffset + DIM_VALUE_TYPE_OFFSET, dimValueTypeID);
 
         if (isDimHaveValue) {
           switch (dimValueType) {
             case FLOAT:
-              UNSAFE.putFloat(dimsAddress + DIM_DATA_OFFSET, (Float) dim);
+              buffer.putFloat(dimsOffset + DIM_DATA_OFFSET, (Float) dim);
               break;
             case DOUBLE:
-              UNSAFE.putDouble(dimsAddress + DIM_DATA_OFFSET, (Double) dim);
+              buffer.putDouble(dimsOffset + DIM_DATA_OFFSET, (Double) dim);
               break;
             case LONG:
-              UNSAFE.putLong(dimsAddress + DIM_DATA_OFFSET, (Long) dim);
+              buffer.putLong(dimsOffset + DIM_DATA_OFFSET, (Long) dim);
               break;
             case STRING:
               int[] arr = (int[]) dim;
               int length = arr.length;
-              UNSAFE.putInt(dimsAddress + STRING_DIM_ARRAY_POS_OFFSET, stringDimArraysPos);
-              UNSAFE.putInt(dimsAddress + STRING_DIM_ARRAY_LENGTH_OFFSET, length);
+              buffer.putInt(dimsOffset + STRING_DIM_ARRAY_POS_OFFSET, stringDimArraysPos);
+              buffer.putInt(dimsOffset + STRING_DIM_ARRAY_LENGTH_OFFSET, length);
 
-              int lengthBytes = length * Integer.BYTES;
-              UNSAFE.copyMemory(arr, INT_ARRAY_OFFSET, null, address + stringDimArraysPos, lengthBytes);
-              stringDimArraysPos += lengthBytes;
+              for (int i = 0; i < length; i++) {
+                buffer.putInt(offset + stringDimArraysPos + i * Integer.BYTES, arr[i]);
+              }
+
+              stringDimArraysPos += length * Integer.BYTES;
               break;
           }
         }
 
-        dimsAddress += SIZE_PER_DIM;
+        dimsOffset += SIZE_PER_DIM;
       }
     }
 
     @Override
-    public IncrementalIndexRow deserialize(OakScopedReadBuffer buffer)
+    public IncrementalIndexRow deserialize(OakScopedReadBuffer oakBuffer)
     {
-      long address = getKeyAddress(buffer);
+      final OakUnsafeDirectBuffer oakDirectBuffer = (OakUnsafeDirectBuffer) oakBuffer;
+      final ByteBuffer buffer = oakDirectBuffer.getByteBuffer();
+      final int offset = oakDirectBuffer.getOffset();
+
       return new IncrementalIndexRow(
-              getTimestamp(address),
-              getAllDims(address),
+              getTimestamp(buffer, offset),
+              getAllDims(buffer, offset),
               dimensionDescsList,
-              getRowIndex(address)
+              getRowIndex(buffer, offset)
       );
     }
 
@@ -445,24 +433,29 @@ public final class OakKey
     }
 
     @Override
-    public int compareSerializedKeys(OakScopedReadBuffer lhsBuffer, OakScopedReadBuffer rhsBuffer)
+    public int compareSerializedKeys(OakScopedReadBuffer lhsOakBuffer, OakScopedReadBuffer rhsOakBuffer)
     {
-      long lhs = getKeyAddress(lhsBuffer);
-      long rhs = getKeyAddress(rhsBuffer);
+      final OakUnsafeDirectBuffer lhsOakDirectBuffer = (OakUnsafeDirectBuffer) lhsOakBuffer;
+      final ByteBuffer lhsBuffer = lhsOakDirectBuffer.getByteBuffer();
+      final int lhsOffset = lhsOakDirectBuffer.getOffset();
 
-      int retVal = Longs.compare(getTimestamp(lhs), getTimestamp(rhs));
+      final OakUnsafeDirectBuffer rhsOakDirectBuffer = (OakUnsafeDirectBuffer) rhsOakBuffer;
+      final ByteBuffer rhsBuffer = rhsOakDirectBuffer.getByteBuffer();
+      final int rhsOffset = rhsOakDirectBuffer.getOffset();
+
+      int retVal = Longs.compare(getTimestamp(lhsBuffer, lhsOffset), getTimestamp(rhsBuffer, rhsOffset));
       if (retVal != 0) {
         return retVal;
       }
 
-      int lhsDimsLength = getDimsLength(lhs);
-      int rhsDimsLength = getDimsLength(rhs);
+      int lhsDimsLength = getDimsLength(lhsBuffer, lhsOffset);
+      int rhsDimsLength = getDimsLength(rhsBuffer, rhsOffset);
       int numComparisons = Math.min(lhsDimsLength, rhsDimsLength);
 
       int index = 0;
       while (retVal == 0 && index < numComparisons) {
-        final Object lhsIdxs = getDim(lhs, index);
-        final Object rhsIdxs = getDim(rhs, index);
+        final Object lhsIdxs = getDim(lhsBuffer, lhsOffset, index);
+        final Object rhsIdxs = getDim(rhsBuffer, rhsOffset, index);
 
         if (lhsIdxs == null) {
           if (rhsIdxs == null) {
@@ -484,32 +477,36 @@ public final class OakKey
       if (retVal == 0) {
         int lengthDiff = Ints.compare(lhsDimsLength, rhsDimsLength);
         if (lengthDiff != 0) {
-          long largerRowAddress = lengthDiff > 0 ? lhs : rhs;
-          retVal = allNull(largerRowAddress, numComparisons) ? 0 : lengthDiff;
+          boolean isAllNull = lengthDiff > 0 ?
+              allNull(lhsBuffer, lhsOffset, numComparisons) : allNull(rhsBuffer, rhsOffset, numComparisons);
+          retVal = isAllNull ? 0 : lengthDiff;
         }
       }
 
-      return retVal == 0 ? rowIndexCompare(getRowIndex(lhs), getRowIndex(rhs)) : retVal;
+      return retVal == 0 ?
+          rowIndexCompare(getRowIndex(lhsBuffer, lhsOffset), getRowIndex(rhsBuffer, rhsOffset)) : retVal;
     }
 
     @Override
-    public int compareKeyAndSerializedKey(IncrementalIndexRow lhs, OakScopedReadBuffer rhsBuffer)
+    public int compareKeyAndSerializedKey(IncrementalIndexRow lhs, OakScopedReadBuffer rhsOakBuffer)
     {
-      long rhs = getKeyAddress(rhsBuffer);
+      final OakUnsafeDirectBuffer rhsOakDirectBuffer = (OakUnsafeDirectBuffer) rhsOakBuffer;
+      final ByteBuffer rhsBuffer = rhsOakDirectBuffer.getByteBuffer();
+      final int rhsOffset = rhsOakDirectBuffer.getOffset();
 
-      int retVal = Longs.compare(lhs.getTimestamp(), getTimestamp(rhs));
+      int retVal = Longs.compare(lhs.getTimestamp(), getTimestamp(rhsBuffer, rhsOffset));
       if (retVal != 0) {
         return retVal;
       }
 
       int lhsDimsLength = lhs.getDimsLength();
-      int rhsDimsLength = getDimsLength(rhs);
+      int rhsDimsLength = getDimsLength(rhsBuffer, rhsOffset);
       int numComparisons = Math.min(lhsDimsLength, rhsDimsLength);
 
       int index = 0;
       while (retVal == 0 && index < numComparisons) {
         final Object lhsIdxs = lhs.getDim(index);
-        final Object rhsIdxs = getDim(rhs, index);
+        final Object rhsIdxs = getDim(rhsBuffer, rhsOffset, index);
 
         if (lhsIdxs == null) {
           if (rhsIdxs == null) {
@@ -531,12 +528,13 @@ public final class OakKey
       if (retVal == 0) {
         int lengthDiff = Ints.compare(lhsDimsLength, rhsDimsLength);
         if (lengthDiff != 0) {
-          boolean isAllNull = lengthDiff > 0 ? allNull(lhs, numComparisons) : allNull(rhs, numComparisons);
+          boolean isAllNull =
+              lengthDiff > 0 ? allNull(lhs, numComparisons) : allNull(rhsBuffer, rhsOffset, numComparisons);
           retVal = isAllNull ? 0 : lengthDiff;
         }
       }
 
-      return retVal == 0 ? rowIndexCompare(lhs.getRowIndex(), getRowIndex(rhs)) : retVal;
+      return retVal == 0 ? rowIndexCompare(lhs.getRowIndex(), getRowIndex(rhsBuffer, rhsOffset)) : retVal;
     }
 
     private int rowIndexCompare(int lsIndex, int rsIndex)
@@ -562,11 +560,11 @@ public final class OakKey
       return true;
     }
 
-    private static boolean allNull(long rowAddress, int startPosition)
+    private static boolean allNull(ByteBuffer buffer, int offset, int startPosition)
     {
-      int dimLength = getDimsLength(rowAddress);
+      int dimLength = getDimsLength(buffer, offset);
       for (int i = startPosition; i < dimLength; i++) {
-        if (!isDimNull(rowAddress, i)) {
+        if (!isDimNull(buffer, offset, i)) {
           return false;
         }
       }

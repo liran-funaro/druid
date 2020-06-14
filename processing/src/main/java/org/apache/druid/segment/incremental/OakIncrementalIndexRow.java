@@ -33,7 +33,8 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   public static final Object[] NO_DIMS = new Object[]{};
 
   private final OakUnsafeDirectBuffer oakDimensions;
-  private long dimensions;
+  private ByteBuffer dimensionsBuffer;
+  private int dimensionsOffset;
   private final OakUnsafeDirectBuffer oakAggregations;
   @Nullable
   private ByteBuffer aggregationsBuffer;
@@ -49,7 +50,8 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     super(0, NO_DIMS, dimensionDescsList);
     this.oakDimensions = (OakUnsafeDirectBuffer) dimensions;
     this.oakAggregations = (OakUnsafeDirectBuffer) aggregations;
-    this.dimensions = oakDimensions.getAddress();
+    this.dimensionsBuffer = oakDimensions.getByteBuffer();
+    this.dimensionsOffset = oakDimensions.getOffset();
     this.aggregationsBuffer = null;
     this.aggregationsOffset = 0;
     this.dimsLength = -1; // lazy initialization
@@ -67,11 +69,12 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   public void reset()
   {
     dimsLength = -1;
-    dimensions = oakDimensions.getAddress();
+    dimensionsBuffer = oakDimensions.getByteBuffer();
+    dimensionsOffset = oakDimensions.getOffset();
     aggregationsBuffer = null;
     aggregationsOffset = 0;
     if (stringDim != null) {
-      stringDim.reset(dimensions);
+      stringDim.reset(dimensionsBuffer, dimensionsOffset);
     }
   }
 
@@ -98,7 +101,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   @Override
   public long getTimestamp()
   {
-    return OakKey.getTimestamp(dimensions);
+    return OakKey.getTimestamp(dimensionsBuffer, dimensionsOffset);
   }
 
   @Override
@@ -108,7 +111,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     if (dimIndex >= getDimsLength()) {
       return null;
     }
-    return OakKey.getDim(dimensions, dimIndex);
+    return OakKey.getDim(dimensionsBuffer, dimensionsOffset, dimIndex);
   }
 
   @Override
@@ -116,7 +119,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   {
     // Read length only once
     if (dimsLength < 0) {
-      dimsLength = OakKey.getDimsLength(dimensions);
+      dimsLength = OakKey.getDimsLength(dimensionsBuffer, dimensionsOffset);
     }
     return dimsLength;
   }
@@ -130,7 +133,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     if (!isDimInBounds(dimIndex)) {
       return true;
     }
-    return OakKey.isDimNull(dimensions, dimIndex);
+    return OakKey.isDimNull(dimensionsBuffer, dimensionsOffset, dimIndex);
   }
 
   /**
@@ -140,7 +143,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   public IndexedInts getStringDim(final int dimIndex)
   {
     if (stringDim == null) {
-      stringDim = new OakKey.StringDim(dimensions);
+      stringDim = new OakKey.StringDim(dimensionsBuffer, dimensionsOffset);
     }
 
     if (stringDim.getDimIndex() != dimIndex) {
@@ -153,7 +156,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   @Override
   public int getRowIndex()
   {
-    return OakKey.getRowIndex(dimensions);
+    return OakKey.getRowIndex(dimensionsBuffer, dimensionsOffset);
   }
 
   @Override
@@ -170,6 +173,6 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   @Override
   public long estimateBytesInMemory()
   {
-    return OakKey.getTotalDimSize(dimensions);
+    return OakKey.getTotalDimSize(dimensionsBuffer, dimensionsOffset);
   }
 }

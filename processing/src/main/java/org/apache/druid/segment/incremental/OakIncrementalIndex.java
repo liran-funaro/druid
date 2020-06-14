@@ -245,13 +245,15 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     Function<Map.Entry<OakUnscopedBuffer, OakUnscopedBuffer>, Row> transformer = entry -> {
       OakUnsafeDirectBuffer keyOakBuff = (OakUnsafeDirectBuffer) entry.getKey();
       OakUnsafeDirectBuffer valueOakBuff = (OakUnsafeDirectBuffer) entry.getValue();
-      long serializedKeyAddress = keyOakBuff.getAddress();
 
-      long timeStamp = OakKey.getTimestamp(serializedKeyAddress);
-      int dimsLength = OakKey.getDimsLength(serializedKeyAddress);
+      final ByteBuffer keyBuffer = keyOakBuff.getByteBuffer();
+      final int keyOffset = keyOakBuff.getOffset();
+
+      long timeStamp = OakKey.getTimestamp(keyBuffer, keyOffset);
+      int dimsLength = OakKey.getDimsLength(keyBuffer, keyOffset);
       Map<String, Object> theVals = Maps.newLinkedHashMap();
       for (int i = 0; i < dimsLength; ++i) {
-        Object dim = OakKey.getDim(serializedKeyAddress, i);
+        Object dim = OakKey.getDim(keyBuffer, keyOffset, i);
         DimensionDesc dimensionDesc = dimensionDescsList.get(i);
         if (dimensionDesc == null) {
           continue;
