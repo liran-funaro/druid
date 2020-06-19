@@ -21,6 +21,7 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 
@@ -45,6 +46,11 @@ public interface AppenderatorConfig
    * Maximum number of bytes (estimated) to store in memory before persisting to local storage
    */
   long getMaxBytesInMemory();
+
+  default long getMaxBytesInMemoryOrDefault()
+  {
+    return TuningConfig.getMaxBytesInMemoryOrDefault(getMaxBytesInMemory(), getIncrementalIndexType());
+  }
 
   int getMaxPendingPersists();
 
