@@ -34,7 +34,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -94,7 +93,7 @@ public class SinkTest extends InitializedNullHandlingTest
         version,
         tuningConfig.getIncrementalIndexType(),
         tuningConfig.getMaxRowsInMemory(),
-        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+        tuningConfig.getMaxBytesInMemoryOrDefault(),
         tuningConfig.isReportParseExceptions(),
         tuningConfig.getDedupColumn()
     );
@@ -251,7 +250,7 @@ public class SinkTest extends InitializedNullHandlingTest
         version,
         tuningConfig.getIncrementalIndexType(),
         tuningConfig.getMaxRowsInMemory(),
-        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+        tuningConfig.getMaxBytesInMemoryOrDefault(),
         tuningConfig.isReportParseExceptions(),
         tuningConfig.getDedupColumn()
     );

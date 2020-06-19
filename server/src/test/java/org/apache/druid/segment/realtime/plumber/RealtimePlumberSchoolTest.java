@@ -48,7 +48,6 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -281,7 +280,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getIncrementalIndexType(),
         tuningConfig.getMaxRowsInMemory(),
-        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+        tuningConfig.getMaxBytesInMemoryOrDefault(),
         tuningConfig.isReportParseExceptions(),
         tuningConfig.getDedupColumn()
     );
@@ -328,7 +327,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getIncrementalIndexType(),
         tuningConfig.getMaxRowsInMemory(),
-        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+        tuningConfig.getMaxBytesInMemoryOrDefault(),
         tuningConfig.isReportParseExceptions(),
         tuningConfig.getDedupColumn()
     );
@@ -380,7 +379,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getIncrementalIndexType(),
         tuningConfig.getMaxRowsInMemory(),
-        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+        tuningConfig.getMaxBytesInMemoryOrDefault(),
         tuningConfig.isReportParseExceptions(),
         tuningConfig.getDedupColumn()
     );
