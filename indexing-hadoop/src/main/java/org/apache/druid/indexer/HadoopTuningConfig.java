@@ -56,6 +56,7 @@ public class HadoopTuningConfig implements TuningConfig
         DEFAULT_SHARD_SPECS,
         DEFAULT_INDEX_SPEC,
         DEFAULT_INDEX_SPEC,
+        null,
         DEFAULT_ROW_FLUSH_BOUNDARY,
         0L,
         false,
@@ -83,6 +84,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final Map<Long, List<HadoopyShardSpec>> shardSpecs;
   private final IndexSpec indexSpec;
   private final IndexSpec indexSpecForIntermediatePersists;
+  private final String incrementalIndexType;
   private final int rowFlushBoundary;
   private final long maxBytesInMemory;
   private final boolean leaveIntermediate;
@@ -108,6 +110,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("shardSpecs") @Nullable Map<Long, List<HadoopyShardSpec>> shardSpecs,
       final @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       final @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
+      final @JsonProperty("incrementalIndexType") @Nullable String incrementalIndexType,
       final @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       final @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
@@ -140,8 +143,9 @@ public class HadoopTuningConfig implements TuningConfig
     this.rowFlushBoundary = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null
                                                       ? DEFAULT_ROW_FLUSH_BOUNDARY
                                                       : maxRowsInMemoryCOMPAT : maxRowsInMemory;
+    this.incrementalIndexType = incrementalIndexType == null ? DEFAULT_INCREMENTAL_INDEX_TYPE : incrementalIndexType;
     // initializing this to 0, it will be lazily initialized to a value
-    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfig#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
@@ -211,6 +215,11 @@ public class HadoopTuningConfig implements TuningConfig
     return indexSpecForIntermediatePersists;
   }
 
+  public String getIncrementalIndexType()
+  {
+    return incrementalIndexType;
+  }
+
   @JsonProperty("maxRowsInMemory")
   public int getRowFlushBoundary()
   {
@@ -221,6 +230,11 @@ public class HadoopTuningConfig implements TuningConfig
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
+  }
+
+  public long getMaxBytesInMemoryOrDefault()
+  {
+    return TuningConfig.getMaxBytesInMemoryOrDefault(getMaxBytesInMemory(), getIncrementalIndexType());
   }
 
   @JsonProperty
@@ -327,6 +341,7 @@ public class HadoopTuningConfig implements TuningConfig
         shardSpecs,
         indexSpec,
         indexSpecForIntermediatePersists,
+        incrementalIndexType,
         rowFlushBoundary,
         maxBytesInMemory,
         leaveIntermediate,
@@ -357,6 +372,7 @@ public class HadoopTuningConfig implements TuningConfig
         shardSpecs,
         indexSpec,
         indexSpecForIntermediatePersists,
+        incrementalIndexType,
         rowFlushBoundary,
         maxBytesInMemory,
         leaveIntermediate,
@@ -387,6 +403,7 @@ public class HadoopTuningConfig implements TuningConfig
         specs,
         indexSpec,
         indexSpecForIntermediatePersists,
+        incrementalIndexType,
         rowFlushBoundary,
         maxBytesInMemory,
         leaveIntermediate,
