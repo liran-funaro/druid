@@ -2063,6 +2063,7 @@ export function guessDataSourceName(spec: IngestionSpec): string | undefined {
 
 export interface TuningConfig {
   type: string;
+  incrementalIndexType?: string;
   maxRowsInMemory?: number;
   maxBytesInMemory?: number;
   partitionsSpec?: PartitionsSpec;
@@ -2322,6 +2323,13 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     defaultValue: 1000,
     defined: (t: TuningConfig) => t.type === 'index_parallel',
     info: <>Polling period in milliseconds to check running task statuses.</>,
+  },
+  {
+    name: 'incrementalIndexType',
+    type: 'string',
+    defaultValue: 'onheap',
+    suggestions: ['onheap', 'offheap', 'oak'],
+    info: <>The incremental-index implementation to use.</>,
   },
   {
     name: 'maxRowsInMemory',
