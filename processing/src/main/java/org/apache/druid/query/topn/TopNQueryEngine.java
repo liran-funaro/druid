@@ -25,6 +25,7 @@ import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -47,6 +48,8 @@ public class TopNQueryEngine
 {
 
   private final NonBlockingPool<ByteBuffer> bufferPool;
+
+  private static final Logger log = new Logger(TopNQueryEngine.class);
 
   public TopNQueryEngine(NonBlockingPool<ByteBuffer> bufferPool)
   {
@@ -164,6 +167,7 @@ public class TopNQueryEngine
       queryMetrics.algorithm(topNAlgorithm);
     }
 
+    log.info("Using query algo: %s", topNAlgorithm.getClass().getSimpleName());
     return new TopNMapFn(query, topNAlgorithm);
   }
 
