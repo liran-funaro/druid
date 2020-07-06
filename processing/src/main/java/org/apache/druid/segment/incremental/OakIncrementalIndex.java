@@ -23,6 +23,7 @@ package org.apache.druid.segment.incremental;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
+import com.yahoo.oak.NativeMemoryAllocator;
 import com.yahoo.oak.OakMap;
 import com.yahoo.oak.OakMapBuilder;
 import com.yahoo.oak.OakUnsafeDirectBuffer;
@@ -39,6 +40,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionIndexer;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import javax.xml.ws.Holder;
@@ -384,6 +386,8 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
   private static class OakFactsHolder implements FactsHolder
   {
+    @Nullable
+    private static NativeMemoryAllocator allocator;
     private final OakMap<IncrementalIndexRow, Row> oak;
 
     private final long minTimestamp;
@@ -409,12 +413,18 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
       this.rollup = incrementalIndexSchema.isRollup();
       this.valueSerializer = new OakValueSerializer(aggsManager);
 
+      if (allocator == null || allocator.isClosed()) {
+        allocator = new NativeMemoryAllocator(JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes());
+      }
+
       OakMapBuilder<IncrementalIndexRow, Row> builder = new OakMapBuilder<>(
           new OakKey.Comparator(dimensionDescsList, this.rollup),
           new OakKey.Serializer(dimensionDescsList, this.rowIndexGenerator),
           valueSerializer,
           getMinIncrementalIndexRow()
-      ).setMemoryCapacity(maxBytesInMemory).setChunkMaxItems(OAK_CUNK_MAX_ITEMS);
+      ).setMemoryAllocator(allocator)
+          .setMemoryCapacity(maxBytesInMemory)
+          .setChunkMaxItems(OAK_CUNK_MAX_ITEMS);
       this.oak = builder.build();
     }
 
