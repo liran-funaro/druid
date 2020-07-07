@@ -119,6 +119,17 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     return canAdd;
   }
 
+  public void validateSize() throws IndexSizeExceededException
+  {
+    if (facts.size() > maxRowCount || facts.memorySize() > maxBytesInMemory) {
+      throw new IndexSizeExceededException(
+          "Maximum number of rows [%d] or max size in bytes [%d] reached",
+          maxRowCount,
+          maxBytesInMemory
+      );
+    }
+  }
+
   @Override
   public String getOutOfRowsReason()
   {
@@ -164,6 +175,10 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
                                         Supplier<InputRow> rowSupplier,
                                         boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
   {
+    if (!skipMaxRowsInMemoryCheck) {
+      // We validate here that we did not exceed the row and memory limitations in previous insertions.
+      validateSize();
+    }
     boolean added = facts.putIfAbsentAggIfPresent(row, key, rowContainer);
 
     int rowCount = facts.size();
@@ -172,20 +187,6 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     if (added) {
       getNumEntries().set(rowCount);
       getBytesInMemory().set(memorySize);
-
-      /*
-      We cannot check the max rows limit before we add because we might rollup.
-      So, we first add the row, and throw an exception later if needed.
-      Note: we compare without equality because we already added the row.
-      */
-      if ((rowCount > maxRowCount || memorySize > maxBytesInMemory)
-              && !skipMaxRowsInMemoryCheck) {
-        throw new IndexSizeExceededException(
-                "Maximum number of rows [%d] or max size in bytes [%d] reached",
-                maxRowCount,
-                maxBytesInMemory
-        );
-      }
     }
 
     return new AddToFactsResult(rowCount, memorySize, new ArrayList<>());
