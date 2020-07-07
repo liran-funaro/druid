@@ -100,9 +100,9 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
   @Override
   public boolean canAppendRow()
   {
-    final boolean countCheck = size() < maxRowCount;
+    final boolean countCheck = facts.size() < maxRowCount;
     // if maxBytesInMemory = -1, then ignore sizeCheck
-    final boolean sizeCheck = maxBytesInMemory <= 0 || getBytesInMemory().get() < maxBytesInMemory;
+    final boolean sizeCheck = maxBytesInMemory <= 0 || facts.memorySize() < maxBytesInMemory;
     final boolean canAdd = countCheck && sizeCheck;
     if (!countCheck && !sizeCheck) {
       outOfRowsReason = StringUtils.format(
@@ -121,11 +121,11 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
   public void validateSize() throws IndexSizeExceededException
   {
-    if (facts.size() > maxRowCount || facts.memorySize() > maxBytesInMemory) {
+    if (facts.size() > maxRowCount || (maxBytesInMemory > 0 && facts.memorySize() > maxBytesInMemory)) {
       throw new IndexSizeExceededException(
-          "Maximum number of rows [%d] or max size in bytes [%d] reached",
-          maxRowCount,
-          maxBytesInMemory
+          "Maximum number of rows [%d out of %d] or max size in bytes [%d out of %d] reached",
+          facts.size(), maxRowCount,
+          facts.memorySize(), maxBytesInMemory
       );
     }
   }
@@ -164,7 +164,9 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
   public void close()
   {
     super.close();
-    aggsManager.close();
+    if (aggsManager != null) {
+      aggsManager.close();
+    }
     facts.clear();
   }
 
