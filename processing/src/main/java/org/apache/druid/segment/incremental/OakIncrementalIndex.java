@@ -100,10 +100,22 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
   @Override
   public boolean canAppendRow()
   {
-    final boolean canAdd = size() < maxRowCount;
-    if (!canAdd) {
+    final boolean countCheck = size() < maxRowCount;
+    // if maxBytesInMemory = -1, then ignore sizeCheck
+    final boolean sizeCheck = maxBytesInMemory <= 0 || getBytesInMemory().get() < maxBytesInMemory;
+    final boolean canAdd = countCheck && sizeCheck;
+    if (!countCheck && !sizeCheck) {
+      outOfRowsReason = StringUtils.format(
+          "Maximum number of rows [%d] and maximum size in bytes [%d] reached",
+          maxRowCount,
+          maxBytesInMemory
+      );
+    } else if (!countCheck) {
       outOfRowsReason = StringUtils.format("Maximum number of rows [%d] reached", maxRowCount);
+    } else if (!sizeCheck) {
+      outOfRowsReason = StringUtils.format("Maximum size in bytes [%d] reached", maxBytesInMemory);
     }
+
     return canAdd;
   }
 
