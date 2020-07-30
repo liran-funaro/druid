@@ -323,6 +323,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
       int curAggOffset = 0;
       for (int i = 0; i < metrics.length; i++) {
         aggOffsetInBuffer[i] = curAggOffset;
+        log.info("Agg: %s - Size: %s.", metrics[i].getName(), metrics[i].getMaxIntermediateSizeWithNulls());
         curAggOffset += metrics[i].getMaxIntermediateSizeWithNulls();
       }
       this.aggsTotalSize = curAggOffset;
