@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.datasketches.Family;
-import org.apache.datasketches.memory.WritableMemory;
 import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
 import org.apache.druid.query.aggregation.BufferAggregator;
@@ -30,7 +29,6 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.IdentityHashMap;
 
 public class SketchBufferAggregator implements BufferAggregator
@@ -39,7 +37,7 @@ public class SketchBufferAggregator implements BufferAggregator
   private final int size;
   private final int maxIntermediateSize;
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<Union>> unions = new IdentityHashMap<>();
-  private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
+  // private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
 
   public SketchBufferAggregator(BaseObjectColumnValueSelector selector, int size, int maxIntermediateSize)
   {
@@ -89,15 +87,18 @@ public class SketchBufferAggregator implements BufferAggregator
     if (union != null) {
       return union;
     }
-    return createNewUnion(buf, position, true);
+
+    throw new RuntimeException("get uninitialized sketch is unsupported.");
+    // return createNewUnion(buf, position, true);
   }
 
   private Union createNewUnion(ByteBuffer buf, int position, boolean isWrapped)
   {
     Union union;
     if (isWrapped) {
-      WritableMemory mem = getMemory(buf).writableRegion(position, maxIntermediateSize);
-      union = (Union) SetOperation.wrap(mem);
+      throw new RuntimeException("wrapped sketch is unsupported.");
+      // WritableMemory mem = getMemory(buf).writableRegion(position, maxIntermediateSize);
+      // union = (Union) SetOperation.wrap(mem);
     } else {
       union = (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION);
     }
@@ -132,7 +133,7 @@ public class SketchBufferAggregator implements BufferAggregator
   public void close()
   {
     unions.clear();
-    memCache.clear();
+    // memCache.clear();
   }
 
   @Override
@@ -144,25 +145,26 @@ public class SketchBufferAggregator implements BufferAggregator
   @Override
   public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
-    createNewUnion(newBuffer, newPosition, true);
-    Int2ObjectMap<Union> unionMap = unions.get(oldBuffer);
-    if (unionMap != null) {
-      unionMap.remove(oldPosition);
-      if (unionMap.isEmpty()) {
-        unions.remove(oldBuffer);
-        memCache.remove(oldBuffer);
-      }
-    }
+    throw new RuntimeException("relocate sketch is unsupported.");
+    // createNewUnion(newBuffer, newPosition, true);
+    // Int2ObjectMap<Union> unionMap = unions.get(oldBuffer);
+    // if (unionMap != null) {
+    //   unionMap.remove(oldPosition);
+    //   if (unionMap.isEmpty()) {
+    //     unions.remove(oldBuffer);
+    //     memCache.remove(oldBuffer);
+    //   }
+    // }
   }
 
-  private WritableMemory getMemory(ByteBuffer buffer)
-  {
-    WritableMemory mem = memCache.get(buffer);
-    if (mem == null) {
-      mem = WritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN);
-      memCache.put(buffer, mem);
-    }
-    return mem;
-  }
+  // private WritableMemory getMemory(ByteBuffer buffer)
+  // {
+  //   WritableMemory mem = memCache.get(buffer);
+  //   if (mem == null) {
+  //     mem = WritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN);
+  //     memCache.put(buffer, mem);
+  //   }
+  //   return mem;
+  // }
 
 }
