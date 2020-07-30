@@ -77,7 +77,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
         selector,
         getLgK(),
         TgtHllType.valueOf(getTgtHllType()),
-        getMaxIntermediateSize()
+        HllSketch.getMaxUpdatableSerializationBytes(getLgK(), TgtHllType.valueOf(getTgtHllType()))
     );
   }
 
@@ -88,7 +88,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return HllSketch.getMaxUpdatableSerializationBytes(getLgK(), TgtHllType.valueOf(getTgtHllType()));
+    return Integer.BYTES;
   }
 
 }

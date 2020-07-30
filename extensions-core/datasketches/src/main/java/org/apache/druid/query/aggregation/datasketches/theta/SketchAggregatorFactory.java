@@ -158,7 +158,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return 1;
+    return Integer.BYTES;
   }
 
   @Override

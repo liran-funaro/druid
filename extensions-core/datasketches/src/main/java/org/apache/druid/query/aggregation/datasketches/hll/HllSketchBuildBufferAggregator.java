@@ -31,7 +31,6 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.IdentityHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -52,7 +51,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   private final int lgK;
   private final TgtHllType tgtHllType;
   private final int size;
-  private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
+  // private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<HllSketch>> sketchCache = new IdentityHashMap<>();
   private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 
@@ -85,18 +84,18 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   {
     // Copy prebuilt empty sketch object.
 
-    final int oldPosition = buf.position();
-    try {
-      buf.position(position);
-      buf.put(emptySketch);
-    }
-    finally {
-      buf.position(oldPosition);
-    }
+    // final int oldPosition = buf.position();
+    // try {
+    //   buf.position(position);
+    //   buf.put(emptySketch);
+    // }
+    // finally {
+    //   buf.position(oldPosition);
+    // }
 
     // Add an HllSketch for this chunk to our sketchCache.
-    final WritableMemory mem = getMemory(buf).writableRegion(position, size);
-    putSketchIntoCache(buf, position, HllSketch.writableWrap(mem));
+    // final WritableMemory mem = getMemory(buf).writableRegion(position, size);
+    putSketchIntoCache(buf, position, new HllSketch(lgK, tgtHllType));
   }
 
   /**
@@ -143,7 +142,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public void close()
   {
-    memCache.clear();
+    // memCache.clear();
     sketchCache.clear();
   }
 
@@ -159,10 +158,10 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  private WritableMemory getMemory(final ByteBuffer buf)
-  {
-    return memCache.computeIfAbsent(buf, b -> WritableMemory.wrap(b, ByteOrder.LITTLE_ENDIAN));
-  }
+  // private WritableMemory getMemory(final ByteBuffer buf)
+  // {
+  //   return memCache.computeIfAbsent(buf, b -> WritableMemory.wrap(b, ByteOrder.LITTLE_ENDIAN));
+  // }
 
   /**
    * In very rare cases sketches can exceed given memory, request on-heap memory and move there.
@@ -171,13 +170,14 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public void relocate(final int oldPosition, final int newPosition, final ByteBuffer oldBuf, final ByteBuffer newBuf)
   {
-    HllSketch sketch = sketchCache.get(oldBuf).get(oldPosition);
-    final WritableMemory oldMem = getMemory(oldBuf).writableRegion(oldPosition, size);
-    if (sketch.isSameResource(oldMem)) { // sketch has not moved
-      final WritableMemory newMem = getMemory(newBuf).writableRegion(newPosition, size);
-      sketch = HllSketch.writableWrap(newMem);
-    }
-    putSketchIntoCache(newBuf, newPosition, sketch);
+    throw new RuntimeException("relocate sketch is unsupported.");
+    // HllSketch sketch = sketchCache.get(oldBuf).get(oldPosition);
+    // final WritableMemory oldMem = getMemory(oldBuf).writableRegion(oldPosition, size);
+    // if (sketch.isSameResource(oldMem)) { // sketch has not moved
+    //   final WritableMemory newMem = getMemory(newBuf).writableRegion(newPosition, size);
+    //   sketch = HllSketch.writableWrap(newMem);
+    // }
+    // putSketchIntoCache(newBuf, newPosition, sketch);
   }
 
   private void putSketchIntoCache(final ByteBuffer buf, final int position, final HllSketch sketch)
