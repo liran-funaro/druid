@@ -94,10 +94,13 @@ public class SketchBufferAggregator implements BufferAggregator
 
   private Union createNewUnion(ByteBuffer buf, int position, boolean isWrapped)
   {
-    WritableMemory mem = getMemory(buf).writableRegion(position, maxIntermediateSize);
-    Union union = isWrapped
-                  ? (Union) SetOperation.wrap(mem)
-                  : (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION, mem);
+    Union union;
+    if (isWrapped) {
+      WritableMemory mem = getMemory(buf).writableRegion(position, maxIntermediateSize);
+      union = (Union) SetOperation.wrap(mem);
+    } else {
+      union = (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION);
+    }
     Int2ObjectMap<Union> unionMap = unions.get(buf);
     if (unionMap == null) {
       unionMap = new Int2ObjectOpenHashMap<>();
