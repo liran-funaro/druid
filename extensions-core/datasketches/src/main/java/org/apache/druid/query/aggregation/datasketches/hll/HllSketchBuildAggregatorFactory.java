@@ -88,7 +88,12 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Integer.BYTES;
+    return HllSketch.getMaxUpdatableSerializationBytes(getLgK(), TgtHllType.valueOf(getTgtHllType()));
   }
 
+  @Override
+  public int getRequiredOffheapSize()
+  {
+    return 1;
+  }
 }
