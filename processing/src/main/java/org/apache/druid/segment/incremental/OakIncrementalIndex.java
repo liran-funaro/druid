@@ -62,9 +62,8 @@ import java.util.function.Function;
  */
 public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
 {
-  public static final long DEFAULT_MAX_MEMORY_IN_BYTES = 32L * (1L << 30); // 32 GB
   public static final int OAK_CUNK_MAX_ITEMS = 256;
-  public static final int OAK_BLOCK_SIZE = 8 * (1 << 20); // 8 MB
+  public static final int OAK_MAX_BLOCK_SIZE = 16 * (1 << 20); // 8 MB
 
   private final OakFactsHolder facts;
   @Nullable
@@ -86,8 +85,8 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
   {
     super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
     this.maxRowCount = maxRowCount;
-    this.maxBytesInMemory = maxBytesInMemory == 0 ? DEFAULT_MAX_MEMORY_IN_BYTES : maxBytesInMemory;
-    this.facts = new OakFactsHolder(incrementalIndexSchema, dimensionDescsList, aggsManager, this.maxBytesInMemory);
+    this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
+    this.facts = new OakFactsHolder(incrementalIndexSchema, dimensionDescsList, aggsManager);
   }
 
   @Override
@@ -414,8 +413,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
     public OakFactsHolder(IncrementalIndexSchema incrementalIndexSchema,
                           List<DimensionDesc> dimensionDescsList,
-                          AggsManager aggsManager,
-                          long maxBytesInMemory)
+                          AggsManager aggsManager)
     {
       this.rowIndexGenerator = new AtomicInteger(0);
       this.dimensionDescsList = dimensionDescsList;
@@ -435,9 +433,8 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
           new OakKey.Serializer(dimensionDescsList, this.rowIndexGenerator),
           valueSerializer,
           minRow
-      ).setPreferredBlockSize(OAK_BLOCK_SIZE)
+      ).setMaxBlockSize(OAK_MAX_BLOCK_SIZE)
           .setChunkMaxItems(OAK_CUNK_MAX_ITEMS)
-          .setMemoryCapacity(maxBytesInMemory)
           .build();
     }
 
