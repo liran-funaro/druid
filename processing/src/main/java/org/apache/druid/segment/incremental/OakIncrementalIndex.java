@@ -65,9 +65,8 @@ import java.util.function.Function;
  */
 public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
 {
-  public static final long OAK_MAX_MEMORY_CAPACITY = 32L * (1L << 30); // 32 GB
   public static final int OAK_CUNK_MAX_ITEMS = 256;
-  public static final int OAK_BLOCK_SIZE = 8 * (1 << 20); // 8 MB
+  public static final int OAK_MAX_BLOCK_SIZE = 16 * (1 << 20); // 8 MB
 
   private final OakFactsHolder facts;
   @Nullable
@@ -465,9 +464,8 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
           new OakKey.Serializer(dimensionDescsList, this.rowIndexGenerator),
           new OakValueSerializer(),
           minRow
-      ).setPreferredBlockSize(OAK_BLOCK_SIZE)
+      ).setMaxBlockSize(OAK_MAX_BLOCK_SIZE)
           .setChunkMaxItems(OAK_CUNK_MAX_ITEMS)
-          .setMemoryCapacity(OAK_MAX_MEMORY_CAPACITY)
           .build();
     }
 
