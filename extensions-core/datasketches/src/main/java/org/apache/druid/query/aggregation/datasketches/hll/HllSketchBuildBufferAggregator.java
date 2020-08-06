@@ -20,8 +20,6 @@
 package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.google.common.util.concurrent.Striped;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
@@ -53,7 +51,6 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   private final TgtHllType tgtHllType;
   private final int size;
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
-  private final IdentityHashMap<ByteBuffer, Int2ObjectMap<HllSketch>> sketchCache = new IdentityHashMap<>();
   private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 
   /**
@@ -93,10 +90,12 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     finally {
       buf.position(oldPosition);
     }
+  }
 
-    // Add an HllSketch for this chunk to our sketchCache.
-    final WritableMemory mem = getMemory(buf).writableRegion(position, size);
-    putSketchIntoCache(buf, position, HllSketch.writableWrap(mem));
+  private HllSketch createNewUnion(ByteBuffer buf, int position)
+  {
+    WritableMemory mem = getMemory(buf).writableRegion(position, size);
+    return HllSketch.writableWrap(mem);
   }
 
   /**
@@ -114,7 +113,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     final Lock lock = stripedLock.getAt(lockIndex(position)).writeLock();
     lock.lock();
     try {
-      final HllSketch sketch = sketchCache.get(buf).get(position);
+      final HllSketch sketch = createNewUnion(buf, position);
       HllSketchBuildAggregator.updateSketch(sketch, value);
     }
     finally {
@@ -133,7 +132,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     final Lock lock = stripedLock.getAt(lockIndex(position)).readLock();
     lock.lock();
     try {
-      return sketchCache.get(buf).get(position).copy();
+      return createNewUnion(buf, position);
     }
     finally {
       lock.unlock();
@@ -144,7 +143,6 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   public void close()
   {
     memCache.clear();
-    sketchCache.clear();
   }
 
   @Override
@@ -171,19 +169,6 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public void relocate(final int oldPosition, final int newPosition, final ByteBuffer oldBuf, final ByteBuffer newBuf)
   {
-    HllSketch sketch = sketchCache.get(oldBuf).get(oldPosition);
-    final WritableMemory oldMem = getMemory(oldBuf).writableRegion(oldPosition, size);
-    if (sketch.isSameResource(oldMem)) { // sketch has not moved
-      final WritableMemory newMem = getMemory(newBuf).writableRegion(newPosition, size);
-      sketch = HllSketch.writableWrap(newMem);
-    }
-    putSketchIntoCache(newBuf, newPosition, sketch);
-  }
-
-  private void putSketchIntoCache(final ByteBuffer buf, final int position, final HllSketch sketch)
-  {
-    final Int2ObjectMap<HllSketch> map = sketchCache.computeIfAbsent(buf, b -> new Int2ObjectOpenHashMap<>());
-    map.put(position, sketch);
   }
 
   /**
