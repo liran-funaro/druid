@@ -29,14 +29,12 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.IdentityHashMap;
 
 public class SketchBufferAggregator implements BufferAggregator
 {
   private final BaseObjectColumnValueSelector selector;
   private final int size;
   private final int maxIntermediateSize;
-  private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
 
   public SketchBufferAggregator(BaseObjectColumnValueSelector selector, int size, int maxIntermediateSize)
   {
@@ -109,7 +107,6 @@ public class SketchBufferAggregator implements BufferAggregator
   @Override
   public void close()
   {
-    memCache.clear();
   }
 
   @Override
@@ -126,12 +123,7 @@ public class SketchBufferAggregator implements BufferAggregator
 
   private WritableMemory getMemory(ByteBuffer buffer)
   {
-    WritableMemory mem = memCache.get(buffer);
-    if (mem == null) {
-      mem = WritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN);
-      memCache.put(buffer, mem);
-    }
-    return mem;
+    return WritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN);
   }
 
 }
