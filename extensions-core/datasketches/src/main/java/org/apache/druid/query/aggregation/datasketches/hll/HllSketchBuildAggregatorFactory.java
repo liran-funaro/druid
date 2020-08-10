@@ -91,4 +91,9 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
     return HllSketch.getMaxUpdatableSerializationBytes(getLgK(), TgtHllType.valueOf(getTgtHllType()));
   }
 
+  @Override
+  public int getRequiredOffheapSize()
+  {
+    return Integer.BYTES;
+  }
 }

@@ -22,14 +22,13 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 import com.google.common.util.concurrent.Striped;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
-import org.apache.datasketches.hll.Union;
-import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
@@ -51,12 +50,8 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   private final int size;
   private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 
-  /**
-   * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty HllSketch image.
-   * {@link HllSketchMergeBufferAggregator} does something similar, but different enough that we don't share code. The
-   * "build" flavor uses {@link HllSketch} objects and the "merge" flavor uses {@link Union} objects.
-   */
-  private final byte[] emptySketch;
+  private final ConcurrentHashMap<Integer, HllSketch> sketches = new ConcurrentHashMap<>();
+  private final AtomicInteger indexIncrement = new AtomicInteger(0);
 
   public HllSketchBuildBufferAggregator(
       final ColumnValueSelector<Object> selector,
@@ -69,31 +64,21 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     this.lgK = lgK;
     this.tgtHllType = tgtHllType;
     this.size = size;
-    this.emptySketch = new byte[size];
-
-    //noinspection ResultOfObjectAllocationIgnored (HllSketch writes to "emptySketch" as a side effect of construction)
-    new HllSketch(lgK, tgtHllType, WritableMemory.wrap(emptySketch));
   }
 
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
-    // Copy prebuilt empty sketch object.
-
-    final int oldPosition = buf.position();
-    try {
-      buf.position(position);
-      buf.put(emptySketch);
-    }
-    finally {
-      buf.position(oldPosition);
-    }
+    int index = indexIncrement.incrementAndGet();
+    buf.putInt(position, index);
+    HllSketch sketch = new HllSketch(lgK, tgtHllType);
+    sketches.put(index, sketch);
   }
 
-  private HllSketch createNewUnion(ByteBuffer buf, int position)
+  private HllSketch getHll(ByteBuffer buf, int position)
   {
-    WritableMemory mem = getMemory(buf).writableRegion(position, size);
-    return HllSketch.writableWrap(mem);
+    int index = buf.getInt(position);
+    return sketches.get(index);
   }
 
   /**
@@ -111,7 +96,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     final Lock lock = stripedLock.getAt(lockIndex(position)).writeLock();
     lock.lock();
     try {
-      final HllSketch sketch = createNewUnion(buf, position);
+      final HllSketch sketch = getHll(buf, position);
       HllSketchBuildAggregator.updateSketch(sketch, value);
     }
     finally {
@@ -130,7 +115,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     final Lock lock = stripedLock.getAt(lockIndex(position)).readLock();
     lock.lock();
     try {
-      return createNewUnion(buf, position);
+      return getHll(buf, position);
     }
     finally {
       lock.unlock();
@@ -154,11 +139,6 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  private WritableMemory getMemory(final ByteBuffer buf)
-  {
-    return WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN);
-  }
-
   /**
    * In very rare cases sketches can exceed given memory, request on-heap memory and move there.
    * We need to identify such sketches and reuse the same objects as opposed to wrapping new memory regions.
@@ -166,6 +146,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public void relocate(final int oldPosition, final int newPosition, final ByteBuffer oldBuf, final ByteBuffer newBuf)
   {
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   /**

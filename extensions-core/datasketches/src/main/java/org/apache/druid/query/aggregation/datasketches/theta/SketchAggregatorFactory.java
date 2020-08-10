@@ -162,6 +162,12 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public int getRequiredOffheapSize()
+  {
+    return Integer.BYTES;
+  }
+
+  @Override
   public List<String> requiredFields()
   {
     return Collections.singletonList(fieldName);

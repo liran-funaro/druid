@@ -248,6 +248,11 @@ public abstract class AggregatorFactory implements Cacheable
     return getMaxIntermediateSize();
   }
 
+  public int getRequiredOffheapSize()
+  {
+    return getMaxIntermediateSizeWithNulls();
+  }
+
   /**
    * Return a potentially optimized form of this AggregatorFactory for per-segment queries.
    */

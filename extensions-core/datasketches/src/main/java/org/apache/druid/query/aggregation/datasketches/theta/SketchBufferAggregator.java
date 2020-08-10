@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.datasketches.theta;
 
 import org.apache.datasketches.Family;
-import org.apache.datasketches.memory.WritableMemory;
 import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
 import org.apache.druid.query.aggregation.BufferAggregator;
@@ -28,25 +27,30 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SketchBufferAggregator implements BufferAggregator
 {
   private final BaseObjectColumnValueSelector selector;
   private final int size;
-  private final int maxIntermediateSize;
 
-  public SketchBufferAggregator(BaseObjectColumnValueSelector selector, int size, int maxIntermediateSize)
+  private final ConcurrentHashMap<Integer, Union> sketches = new ConcurrentHashMap<>();
+  private final AtomicInteger indexIncrement = new AtomicInteger(0);
+
+  public SketchBufferAggregator(BaseObjectColumnValueSelector selector, int size, int ignored)
   {
     this.selector = selector;
     this.size = size;
-    this.maxIntermediateSize = maxIntermediateSize;
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    createNewUnion(buf, position, false);
+    int index = indexIncrement.incrementAndGet();
+    buf.putInt(position, index);
+    Union union = (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION);
+    sketches.put(index, union);
   }
 
   @Override
@@ -57,14 +61,14 @@ public class SketchBufferAggregator implements BufferAggregator
       return;
     }
 
-    Union union = getOrCreateUnion(buf, position);
+    Union union = getUnion(buf, position);
     SketchAggregator.updateUnion(union, update);
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    Union union = createNewUnion(buf, position, true);
+    Union union = getUnion(buf, position);
     //in the code below, I am returning SetOp.getResult(true, null)
     //"true" returns an ordered sketch but slower to compute than unordered sketch.
     //however, advantage of ordered sketch is that they are faster to "union" later
@@ -73,17 +77,10 @@ public class SketchBufferAggregator implements BufferAggregator
     return SketchHolder.of(union.getResult(true, null));
   }
 
-  private Union getOrCreateUnion(ByteBuffer buf, int position)
+  private Union getUnion(ByteBuffer buf, int position)
   {
-    return createNewUnion(buf, position, true);
-  }
-
-  private Union createNewUnion(ByteBuffer buf, int position, boolean isWrapped)
-  {
-    WritableMemory mem = getMemory(buf).writableRegion(position, maxIntermediateSize);
-    return isWrapped
-        ? (Union) SetOperation.wrap(mem)
-        : (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION, mem);
+    int index = buf.getInt(position);
+    return sketches.get(index);
   }
 
   @Override
@@ -118,12 +115,9 @@ public class SketchBufferAggregator implements BufferAggregator
   @Override
   public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
-    createNewUnion(newBuffer, newPosition, true);
+    int index = oldBuffer.getInt(oldPosition);
+    newBuffer.putInt(newPosition, index);
+    Union union = (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION);
+    sketches.put(index, union);
   }
-
-  private WritableMemory getMemory(ByteBuffer buffer)
-  {
-    return WritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN);
-  }
-
 }
