@@ -30,7 +30,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.IdentityHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
@@ -50,7 +49,6 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   private final int lgK;
   private final TgtHllType tgtHllType;
   private final int size;
-  private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
   private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 
   /**
@@ -142,7 +140,6 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public void close()
   {
-    memCache.clear();
   }
 
   @Override
@@ -159,7 +156,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
 
   private WritableMemory getMemory(final ByteBuffer buf)
   {
-    return memCache.computeIfAbsent(buf, b -> WritableMemory.wrap(b, ByteOrder.LITTLE_ENDIAN));
+    return WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN);
   }
 
   /**
