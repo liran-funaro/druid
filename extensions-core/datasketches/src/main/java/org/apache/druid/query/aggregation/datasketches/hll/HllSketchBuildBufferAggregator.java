@@ -67,6 +67,12 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public int getOverheadPerEntryBytes()
+  {
+    return size;
+  }
+
+  @Override
   public void init(final ByteBuffer buf, final int position)
   {
     int index = indexIncrement.incrementAndGet();

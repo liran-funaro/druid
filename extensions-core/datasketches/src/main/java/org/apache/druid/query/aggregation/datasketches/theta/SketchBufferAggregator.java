@@ -34,14 +34,22 @@ public class SketchBufferAggregator implements BufferAggregator
 {
   private final BaseObjectColumnValueSelector selector;
   private final int size;
+  private final int maxIntermediateSize;
 
   private final ConcurrentHashMap<Integer, Union> sketches = new ConcurrentHashMap<>();
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
 
-  public SketchBufferAggregator(BaseObjectColumnValueSelector selector, int size, int ignored)
+  public SketchBufferAggregator(BaseObjectColumnValueSelector selector, int size, int maxIntermediateSize)
   {
     this.selector = selector;
     this.size = size;
+    this.maxIntermediateSize = maxIntermediateSize;
+  }
+
+  @Override
+  public int getOverheadPerEntryBytes()
+  {
+    return maxIntermediateSize;
   }
 
   @Override
