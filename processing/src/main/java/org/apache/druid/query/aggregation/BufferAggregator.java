@@ -40,6 +40,11 @@ import java.nio.ByteBuffer;
 @ExtensionPoint
 public interface BufferAggregator extends HotLoopCallee
 {
+  default int getOverheadPerEntryBytes()
+  {
+    return 0;
+  }
+
   /**
    * Initializes the buffer location
    *

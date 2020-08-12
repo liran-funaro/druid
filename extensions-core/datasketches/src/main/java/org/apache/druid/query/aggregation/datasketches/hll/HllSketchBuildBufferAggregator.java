@@ -80,19 +80,14 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   {
     // Copy prebuilt empty sketch object.
 
-    final int oldPosition = buf.position();
-    try {
-      buf.position(position);
-      buf.put(emptySketch);
-    }
-    finally {
-      buf.position(oldPosition);
-    }
+    final ByteBuffer dup = buf.duplicate();
+    dup.position(position);
+    dup.put(emptySketch);
   }
 
-  private HllSketch createNewUnion(ByteBuffer buf, int position)
+  private HllSketch createSketch(ByteBuffer buf, int position)
   {
-    WritableMemory mem = getMemory(buf).writableRegion(position, size);
+    WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
     return HllSketch.writableWrap(mem);
   }
 
@@ -111,7 +106,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     final Lock lock = stripedLock.getAt(lockIndex(position)).writeLock();
     lock.lock();
     try {
-      final HllSketch sketch = createNewUnion(buf, position);
+      final HllSketch sketch = createSketch(buf, position);
       HllSketchBuildAggregator.updateSketch(sketch, value);
     }
     finally {
@@ -130,7 +125,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     final Lock lock = stripedLock.getAt(lockIndex(position)).readLock();
     lock.lock();
     try {
-      return createNewUnion(buf, position);
+      return createSketch(buf, position);
     }
     finally {
       lock.unlock();
@@ -152,11 +147,6 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   public long getLong(final ByteBuffer buf, final int position)
   {
     throw new UnsupportedOperationException("Not implemented");
-  }
-
-  private WritableMemory getMemory(final ByteBuffer buf)
-  {
-    return WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN);
   }
 
   /**
