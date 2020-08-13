@@ -69,7 +69,7 @@ public class SketchBufferAggregator implements BufferAggregator
 
     //Choose RF, minReqBytes, lgArrLongs.
     final int lgRF = builder.getResizeFactor().lg();
-    final int lgArrLongs = (lgRF == 0) ? builder.getLgNominalEntries() + 1 : 5;
+    final int lgArrLongs = (lgRF == 0) ? builder.getLgNominalEntries() + 1 : 7;
     this.minReqBytes = (8 << lgArrLongs) + (preambleLongs << 3);
 
     this.sketches = new OakMapBuilder<>(
@@ -104,9 +104,9 @@ public class SketchBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public int getOverheadPerEntryBytes()
+  public long getOverheadBytes()
   {
-    return maxIntermediateSize;
+    return sketches.memorySize();
   }
 
   @Override

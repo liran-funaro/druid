@@ -53,7 +53,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 
 /**
@@ -312,8 +311,8 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
      */
     private final int[] aggOffsetInBuffer;
     private final BufferAggregator[] aggs;
+    private BufferAggregator[] overheadAggs;
     private final int aggsTotalSize;
-    private int overheadPerEntry;
 
     public AggsManager(AggregatorFactory[] metrics, boolean reportParseExceptions)
     {
@@ -322,6 +321,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
       this.reportParseExceptions = reportParseExceptions;
       this.aggOffsetInBuffer = new int[metrics.length];
       this.aggs = new BufferAggregator[metrics.length];
+      this.overheadAggs = new BufferAggregator[0];
 
       int curAggOffset = 0;
       for (int i = 0; i < metrics.length; i++) {
@@ -329,18 +329,24 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
         curAggOffset += metrics[i].getOffheapSize();
       }
       this.aggsTotalSize = curAggOffset;
-      this.overheadPerEntry = 0;
     }
 
-    public int getOverheadPerEntryBytes()
+    public long getOverheadBytes()
     {
-      return overheadPerEntry;
+      long ret = 0;
+
+      for (BufferAggregator agg : overheadAggs) {
+        ret += agg.getOverheadBytes();
+      }
+
+      return ret;
     }
 
     public void initValue(ByteBuffer aggBuffer, int aggOffset, InputRow row, ThreadLocal<InputRow> rowContainer)
     {
       if (metrics.length > 0 && aggs[aggs.length - 1] == null) {
         synchronized (this) {
+          ArrayList<BufferAggregator> overheadAggs = new ArrayList<>();
           if (aggs[aggs.length - 1] == null) {
             // note: creation of Aggregators is done lazily when at least one row from input is available
             // so that FilteredAggregators could be initialized correctly.
@@ -350,11 +356,13 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
               if (aggs[i] == null) {
                 aggs[i] = agg.factorizeBuffered(selectors.get(agg.getName()));
               }
+              if (aggs[i].hasOverhead()) {
+                overheadAggs.add(aggs[i]);
+              }
             }
             rowContainer.set(null);
           }
-
-          this.overheadPerEntry = Stream.of(aggs).mapToInt(BufferAggregator::getOverheadPerEntryBytes).sum();
+          this.overheadAggs = overheadAggs.toArray(this.overheadAggs);
         }
       }
 
@@ -616,7 +624,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
     public long memorySize()
     {
-      return oak.memorySize() + (oak.size() * aggsManager.getOverheadPerEntryBytes());
+      return oak.memorySize() + aggsManager.getOverheadBytes();
     }
 
     public int getLastRowIndex()
