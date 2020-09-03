@@ -354,7 +354,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
             for (int i = 0; i < metrics.length; i++) {
               final AggregatorFactory agg = metrics[i];
               if (aggs[i] == null) {
-                aggs[i] = agg.factorizeBuffered(selectors.get(agg.getName()));
+                aggs[i] = agg.factorizeBufferedForIngestion(selectors.get(agg.getName()));
               }
               if (aggs[i].hasOverhead()) {
                 overheadAggs.add(aggs[i]);

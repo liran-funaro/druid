@@ -78,9 +78,8 @@ public abstract class GrowableMemoryAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer indexBuf, int indexPos)
   {
-    int index = incrementalIndex.incrementAndGet();
+    int index = insert(-1);
     indexBuf.putInt(indexPos, index);
-    internalStorage.put(index, -1);
   }
 
   @Override
@@ -126,11 +125,23 @@ public abstract class GrowableMemoryAggregator implements BufferAggregator
     newBuffer.putInt(newPosition, index);
   }
 
-  private WritableMemory getMemory(OakBuffer oakBuf)
+  private static WritableMemory getMemory(OakBuffer oakBuf)
   {
     OakUnsafeDirectBuffer buf = (OakUnsafeDirectBuffer) oakBuf;
     return WritableMemory.wrap(buf.getByteBuffer(), ByteOrder.LITTLE_ENDIAN)
         .writableRegion(buf.getOffset(), buf.getLength());
+  }
+
+  private static void setMemoryRequestServer(WritableMemory mem, MemoryRequestServer memReqSvr)
+  {
+    try {
+      Field memReqSvrField = mem.getClass().getDeclaredField("memReqSvr");
+      memReqSvrField.setAccessible(true); // Force to access the field
+      memReqSvrField.set(mem, memReqSvr);
+    }
+    catch (NoSuchFieldException | IllegalAccessException e) {
+      log.error(e, "Failed setting memory server");
+    }
   }
 
   private WritableMemory getMemory(final ByteBuffer indexBuf, final int indexPos)
@@ -140,18 +151,31 @@ public abstract class GrowableMemoryAggregator implements BufferAggregator
 
   private WritableMemory getMemory(final ByteBuffer outterBuf, final int outterPos, final int index)
   {
+    return getMemory(index, new AggregatorMemoryRequestServer(outterBuf, outterPos));
+  }
+
+  private WritableMemory getMemory(final int index, AggregatorMemoryRequestServer memReqSvr)
+  {
     WritableMemory mem = getMemory(internalStorage.zc().get(index));
-
-    try {
-      Field memReqSvrField = mem.getClass().getDeclaredField("memReqSvr");
-      memReqSvrField.setAccessible(true); // Force to access the field
-      memReqSvrField.set(mem, new AggregatorMemoryRequestServer(outterBuf, outterPos, index));
-    }
-    catch (NoSuchFieldException | IllegalAccessException e) {
-      log.error(e, "Failed setting memory server");
-    }
-
+    setMemoryRequestServer(mem, memReqSvr);
     return mem;
+  }
+
+  private int insert(int capacityBytes)
+  {
+    final int newIndex = incrementalIndex.incrementAndGet();
+    internalStorage.put(newIndex, capacityBytes);
+    return newIndex;
+  }
+
+  private void replace(ByteBuffer indexBuf, int indexPos, int newIndex)
+  {
+    final int oldIndex = indexBuf.getInt(indexPos);
+    if (oldIndex == newIndex) {
+      return;
+    }
+    indexBuf.putInt(indexPos, newIndex);
+    internalStorage.remove(oldIndex);
   }
 
   private class ValueSerializer implements OakSerializer<Integer>
@@ -166,10 +190,9 @@ public abstract class GrowableMemoryAggregator implements BufferAggregator
     @Override
     public void serialize(Integer reqBytes, OakScopedWriteBuffer oakScopedWriteBuffer)
     {
-      if (reqBytes > 0) {
-        return;
+      if (reqBytes < 0) {
+        init(getMemory(oakScopedWriteBuffer));
       }
-      init(getMemory(oakScopedWriteBuffer));
     }
 
     @Override
@@ -181,7 +204,7 @@ public abstract class GrowableMemoryAggregator implements BufferAggregator
     @Override
     public int calculateSize(Integer reqBytes)
     {
-      return reqBytes < minReqBytes ? minReqBytes : reqBytes;
+      return Math.max(reqBytes, minReqBytes);
     }
   }
 
@@ -190,33 +213,26 @@ public abstract class GrowableMemoryAggregator implements BufferAggregator
     final ByteBuffer indexBuf;
     final int indexPos;
 
-    int curIndex;
     int newIndex;
 
-    AggregatorMemoryRequestServer(ByteBuffer indexBuf, int indexPos, int index)
+    AggregatorMemoryRequestServer(ByteBuffer indexBuf, int indexPos)
     {
       this.indexBuf = indexBuf;
       this.indexPos = indexPos;
-      this.curIndex = index;
       this.newIndex = -1;
     }
 
     @Override
     public WritableMemory request(long capacityBytes)
     {
-      newIndex = incrementalIndex.incrementAndGet();
-      internalStorage.put(newIndex, (int) capacityBytes);
-      return getMemory(indexBuf, indexPos, newIndex);
+      newIndex = insert((int) capacityBytes);
+      return getMemory(newIndex, this);
     }
 
     @Override
     public void requestClose(WritableMemory memToClose, WritableMemory newMemory)
     {
-      indexBuf.putInt(indexPos, newIndex);
-      internalStorage.remove(curIndex);
-
-      curIndex = newIndex;
-      newIndex = -1;
+      replace(indexBuf, indexPos, newIndex);
     }
   }
 }

@@ -57,6 +57,11 @@ public abstract class AggregatorFactory implements Cacheable
 
   public abstract BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory);
 
+  public BufferAggregator factorizeBufferedForIngestion(ColumnSelectorFactory metricFactory)
+  {
+    return factorizeBuffered(metricFactory);
+  }
+
   /**
    * Create a VectorAggregator based on the provided column selector factory. Will throw an exception if
    * this aggregation class does not support vectorization: check "canVectorize" first.
