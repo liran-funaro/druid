@@ -40,6 +40,16 @@ import java.nio.ByteBuffer;
 @ExtensionPoint
 public interface BufferAggregator extends HotLoopCallee
 {
+  default boolean hasInternalStorage()
+  {
+    return false;
+  }
+
+  default long getInternalStorageBytes()
+  {
+    return 0;
+  }
+
   /**
    * Initializes the buffer location
    *

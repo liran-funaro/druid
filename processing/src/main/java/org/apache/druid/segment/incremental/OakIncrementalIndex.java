@@ -312,6 +312,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
      */
     private final int[] aggOffsetInBuffer;
     private final BufferAggregator[] aggs;
+    private BufferAggregator[] internalStorageAggs;
     private final int aggsTotalSize;
 
     public AggsManager(AggregatorFactory[] metrics, boolean reportParseExceptions)
@@ -321,19 +322,32 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
       this.reportParseExceptions = reportParseExceptions;
       this.aggOffsetInBuffer = new int[metrics.length];
       this.aggs = new BufferAggregator[metrics.length];
+      this.internalStorageAggs = new BufferAggregator[0];
 
       int curAggOffset = 0;
       for (int i = 0; i < metrics.length; i++) {
         aggOffsetInBuffer[i] = curAggOffset;
-        curAggOffset += metrics[i].getMaxIntermediateSizeWithNulls();
+        curAggOffset += metrics[i].getGrowableBufferSize();
       }
       this.aggsTotalSize = curAggOffset;
+    }
+
+    public long getAggregatorsStorageBytes()
+    {
+      long ret = 0;
+
+      for (BufferAggregator agg : internalStorageAggs) {
+        ret += agg.getInternalStorageBytes();
+      }
+
+      return ret;
     }
 
     public void initValue(ByteBuffer aggBuffer, int aggOffset, InputRow row, ThreadLocal<InputRow> rowContainer)
     {
       if (metrics.length > 0 && aggs[aggs.length - 1] == null) {
         synchronized (this) {
+          ArrayList<BufferAggregator> internalStorageAggs = new ArrayList<>();
           if (aggs[aggs.length - 1] == null) {
             // note: creation of Aggregators is done lazily when at least one row from input is available
             // so that FilteredAggregators could be initialized correctly.
@@ -341,11 +355,15 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
             for (int i = 0; i < metrics.length; i++) {
               final AggregatorFactory agg = metrics[i];
               if (aggs[i] == null) {
-                aggs[i] = agg.factorizeBuffered(selectors.get(agg.getName()));
+                aggs[i] = agg.factorizeBufferedGrowable(selectors.get(agg.getName()));
+              }
+              if (aggs[i].hasInternalStorage()) {
+                internalStorageAggs.add(aggs[i]);
               }
             }
             rowContainer.set(null);
           }
+          this.internalStorageAggs = internalStorageAggs.toArray(this.internalStorageAggs);
         }
       }
 
@@ -608,7 +626,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
     public long memorySize()
     {
-      return oak.memorySize();
+      return oak.memorySize() + aggsManager.getAggregatorsStorageBytes();
     }
 
     public int getLastRowIndex()

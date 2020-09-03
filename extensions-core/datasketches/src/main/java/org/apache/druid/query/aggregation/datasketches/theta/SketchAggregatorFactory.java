@@ -78,6 +78,19 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public BufferAggregator factorizeBufferedGrowable(ColumnSelectorFactory metricFactory)
+  {
+    BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
+    return new SketchGrowableMemoryAggregator(selector, size);
+  }
+
+  @Override
+  public int getGrowableBufferSize()
+  {
+    return Integer.BYTES;
+  }
+
+  @Override
   public Object deserialize(Object object)
   {
     return SketchHolder.deserialize(object);
