@@ -43,7 +43,6 @@ public class HadoopTuningConfig implements TuningConfig
   private static final DimensionBasedPartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.defaultSpec();
   private static final Map<Long, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.of();
   private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
-  private static final int DEFAULT_ROW_FLUSH_BOUNDARY = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
   private static final boolean DEFAULT_USE_COMBINER = false;
   private static final int DEFAULT_NUM_BACKGROUND_PERSIST_THREADS = 0;
 
@@ -56,7 +55,7 @@ public class HadoopTuningConfig implements TuningConfig
         DEFAULT_SHARD_SPECS,
         DEFAULT_INDEX_SPEC,
         DEFAULT_INDEX_SPEC,
-        DEFAULT_ROW_FLUSH_BOUNDARY,
+        DEFAULT_MAX_ROWS_IN_MEMORY,
         0L,
         false,
         true,
@@ -83,7 +82,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final Map<Long, List<HadoopyShardSpec>> shardSpecs;
   private final IndexSpec indexSpec;
   private final IndexSpec indexSpecForIntermediatePersists;
-  private final int rowFlushBoundary;
+  private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final boolean leaveIntermediate;
   private final boolean cleanupOnFailure;
@@ -137,11 +136,11 @@ public class HadoopTuningConfig implements TuningConfig
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
     this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
                                             this.indexSpec : indexSpecForIntermediatePersists;
-    this.rowFlushBoundary = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null
-                                                      ? DEFAULT_ROW_FLUSH_BOUNDARY
+    this.maxRowsInMemory = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null
+                                                      ? DEFAULT_MAX_ROWS_IN_MEMORY
                                                       : maxRowsInMemoryCOMPAT : maxRowsInMemory;
     // initializing this to 0, it will be lazily initialized to a value
-    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfig#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
@@ -187,6 +186,7 @@ public class HadoopTuningConfig implements TuningConfig
     return version;
   }
 
+  @Override
   @JsonProperty
   public DimensionBasedPartitionsSpec getPartitionsSpec()
   {
@@ -199,24 +199,28 @@ public class HadoopTuningConfig implements TuningConfig
     return shardSpecs;
   }
 
+  @Override
   @JsonProperty
   public IndexSpec getIndexSpec()
   {
     return indexSpec;
   }
 
+  @Override
   @JsonProperty
   public IndexSpec getIndexSpecForIntermediatePersists()
   {
     return indexSpecForIntermediatePersists;
   }
 
-  @JsonProperty("maxRowsInMemory")
-  public int getRowFlushBoundary()
+  @Override
+  @JsonProperty
+  public int getMaxRowsInMemory()
   {
-    return rowFlushBoundary;
+    return maxRowsInMemory;
   }
 
+  @Override
   @JsonProperty
   public long getMaxBytesInMemory()
   {
@@ -327,7 +331,7 @@ public class HadoopTuningConfig implements TuningConfig
         shardSpecs,
         indexSpec,
         indexSpecForIntermediatePersists,
-        rowFlushBoundary,
+        maxRowsInMemory,
         maxBytesInMemory,
         leaveIntermediate,
         cleanupOnFailure,
@@ -357,7 +361,7 @@ public class HadoopTuningConfig implements TuningConfig
         shardSpecs,
         indexSpec,
         indexSpecForIntermediatePersists,
-        rowFlushBoundary,
+        maxRowsInMemory,
         maxBytesInMemory,
         leaveIntermediate,
         cleanupOnFailure,
@@ -387,7 +391,7 @@ public class HadoopTuningConfig implements TuningConfig
         specs,
         indexSpec,
         indexSpecForIntermediatePersists,
-        rowFlushBoundary,
+        maxRowsInMemory,
         maxBytesInMemory,
         leaveIntermediate,
         cleanupOnFailure,

@@ -64,7 +64,6 @@ import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
@@ -199,7 +198,7 @@ public class AppenderatorImpl implements Appenderator
       this.sinkTimeline = sinkQuerySegmentWalker.getSinkTimeline();
     }
 
-    maxBytesTuningConfig = TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory());
+    maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
   }
 
   @Override

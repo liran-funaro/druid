@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Objects;
 
-public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfig, AppenderatorConfig
+public abstract class SeekableStreamIndexTaskTuningConfig implements AppenderatorConfig
 {
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
   private static final boolean DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK = false;
@@ -87,7 +87,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     this.maxRowsInMemory = maxRowsInMemory == null ? defaults.getMaxRowsInMemory() : maxRowsInMemory;
     this.partitionsSpec = new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
     // initializing this to 0, it will be lazily initialized to a value
-    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfig#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaults.getIntermediatePersistPeriod()
