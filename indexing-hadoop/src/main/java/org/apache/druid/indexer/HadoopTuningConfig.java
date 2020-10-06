@@ -38,7 +38,7 @@ import java.util.Map;
 /**
  */
 @JsonTypeName("hadoop")
-public class HadoopTuningConfig implements TuningConfig
+public class HadoopTuningConfig extends TuningConfig
 {
   private static final DimensionBasedPartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.defaultSpec();
   private static final Map<Long, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.of();
@@ -82,8 +82,6 @@ public class HadoopTuningConfig implements TuningConfig
   private final Map<Long, List<HadoopyShardSpec>> shardSpecs;
   private final IndexSpec indexSpec;
   private final IndexSpec indexSpecForIntermediatePersists;
-  private final int maxRowsInMemory;
-  private final long maxBytesInMemory;
   private final boolean leaveIntermediate;
   private final boolean cleanupOnFailure;
   private final boolean overwriteFiles;
@@ -129,6 +127,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback
   )
   {
+    super(maxRowsInMemory == null ? maxRowsInMemoryCOMPAT : maxRowsInMemory, maxBytesInMemory);
     this.workingPath = workingPath;
     this.version = version == null ? DateTimes.nowUtc().toString() : version;
     this.partitionsSpec = partitionsSpec == null ? DEFAULT_PARTITIONS_SPEC : partitionsSpec;
@@ -136,12 +135,6 @@ public class HadoopTuningConfig implements TuningConfig
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
     this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
                                             this.indexSpec : indexSpecForIntermediatePersists;
-    this.maxRowsInMemory = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null
-                                                      ? DEFAULT_MAX_ROWS_IN_MEMORY
-                                                      : maxRowsInMemoryCOMPAT : maxRowsInMemory;
-    // initializing this to 0, it will be lazily initialized to a value
-    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfig#getMaxBytesInMemoryOrDefault(long)
-    this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
     this.overwriteFiles = overwriteFiles;
@@ -211,20 +204,6 @@ public class HadoopTuningConfig implements TuningConfig
   public IndexSpec getIndexSpecForIntermediatePersists()
   {
     return indexSpecForIntermediatePersists;
-  }
-
-  @Override
-  @JsonProperty
-  public int getMaxRowsInMemory()
-  {
-    return maxRowsInMemory;
-  }
-
-  @Override
-  @JsonProperty
-  public long getMaxBytesInMemory()
-  {
-    return maxBytesInMemory;
   }
 
   @JsonProperty

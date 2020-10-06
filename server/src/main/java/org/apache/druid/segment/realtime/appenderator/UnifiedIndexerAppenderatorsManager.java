@@ -362,36 +362,24 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
    * Row-based limits are disabled by setting maxRowsInMemory to an essentially unlimited value.
    * maxBytesInMemory is overridden with the provided value. These overrides replace whatever the user has specified.
    */
-  private static class MemoryParameterOverridingAppenderatorConfig implements AppenderatorConfig
+  private static class MemoryParameterOverridingAppenderatorConfig extends AppenderatorConfig
   {
     private final AppenderatorConfig baseConfig;
-    private final long newMaxBytesInMemory;
 
     public MemoryParameterOverridingAppenderatorConfig(
         AppenderatorConfig baseConfig,
         long newMaxBytesInMemory
     )
     {
+      // maxRowsInMemory is unlimited, rely on maxBytesInMemory instead
+      super(Integer.MAX_VALUE, newMaxBytesInMemory);
       this.baseConfig = baseConfig;
-      this.newMaxBytesInMemory = newMaxBytesInMemory;
     }
 
     @Override
     public boolean isReportParseExceptions()
     {
       return baseConfig.isReportParseExceptions();
-    }
-
-    @Override
-    public int getMaxRowsInMemory()
-    {
-      return Integer.MAX_VALUE; // unlimited, rely on maxBytesInMemory instead
-    }
-
-    @Override
-    public long getMaxBytesInMemory()
-    {
-      return newMaxBytesInMemory;
     }
 
     @Override

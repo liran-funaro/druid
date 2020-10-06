@@ -32,13 +32,11 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Objects;
 
-public abstract class SeekableStreamIndexTaskTuningConfig implements AppenderatorConfig
+public abstract class SeekableStreamIndexTaskTuningConfig extends AppenderatorConfig
 {
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
   private static final boolean DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK = false;
 
-  private final int maxRowsInMemory;
-  private final long maxBytesInMemory;
   private final DynamicPartitionsSpec partitionsSpec;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
@@ -81,14 +79,11 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
       @Nullable Integer maxSavedParseExceptions
   )
   {
+    super(maxRowsInMemory, maxBytesInMemory);
     // Cannot be a static because default basePersistDirectory is unique per-instance
     final RealtimeTuningConfig defaults = RealtimeTuningConfig.makeDefaultTuningConfig(basePersistDirectory);
 
-    this.maxRowsInMemory = maxRowsInMemory == null ? defaults.getMaxRowsInMemory() : maxRowsInMemory;
     this.partitionsSpec = new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
-    // initializing this to 0, it will be lazily initialized to a value
-    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfig#getMaxBytesInMemoryOrDefault(long)
-    this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaults.getIntermediatePersistPeriod()
                                      : intermediatePersistPeriod;
@@ -128,20 +123,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
-  }
-
-  @Override
-  @JsonProperty
-  public int getMaxRowsInMemory()
-  {
-    return maxRowsInMemory;
-  }
-
-  @Override
-  @JsonProperty
-  public long getMaxBytesInMemory()
-  {
-    return maxBytesInMemory;
   }
 
   @Override

@@ -19,11 +19,14 @@
 
 package org.apache.druid.segment.indexing;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.utils.JvmUtils;
+
+import javax.annotation.Nullable;
 
 /**
  */
@@ -31,28 +34,50 @@ import org.apache.druid.utils.JvmUtils;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "realtime", value = RealtimeTuningConfig.class)
 })
-public interface TuningConfig
+public abstract class TuningConfig
 {
-  boolean DEFAULT_LOG_PARSE_EXCEPTIONS = false;
-  int DEFAULT_MAX_PARSE_EXCEPTIONS = Integer.MAX_VALUE;
-  int DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS = 0;
-  int DEFAULT_MAX_ROWS_IN_MEMORY = 1_000_000;
+  public static final boolean DEFAULT_LOG_PARSE_EXCEPTIONS = false;
+  public static final int DEFAULT_MAX_PARSE_EXCEPTIONS = Integer.MAX_VALUE;
+  public static final int DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS = 0;
+  public static final int DEFAULT_MAX_ROWS_IN_MEMORY = 1_000_000;
+
+  protected final int maxRowsInMemory;
+  protected final long maxBytesInMemory;
+
+  protected TuningConfig(
+      @Nullable Integer maxRowsInMemory,
+      @Nullable Long maxBytesInMemory
+  )
+  {
+    this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
+    /** initializing this to 0, it will be lazily initialized to a value
+     * @see #getMaxBytesInMemoryOrDefault() */
+    this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+  }
 
   /**
    * Maximum number of rows in memory before persisting to local storage
    */
-  int getMaxRowsInMemory();
+  @JsonProperty
+  public int getMaxRowsInMemory()
+  {
+    return maxRowsInMemory;
+  }
 
   /**
    * Maximum number of bytes (estimated) to store in memory before persisting to local storage
    */
-  long getMaxBytesInMemory();
+  @JsonProperty
+  public long getMaxBytesInMemory()
+  {
+    return maxBytesInMemory;
+  }
 
   /**
    * Maximum number of bytes (estimated) to store in memory before persisting to local storage.
    * If getMaxBytesInMemory() returns 0, the appendable index default will be used.
    */
-  default long getMaxBytesInMemoryOrDefault()
+  public long getMaxBytesInMemoryOrDefault()
   {
     // In the main tuningConfig class constructor, we set the maxBytes to 0 if null to avoid setting
     // maxBytes to max jvm memory of the process that starts first. Instead we set the default based on
@@ -70,9 +95,9 @@ public interface TuningConfig
     }
   }
 
-  PartitionsSpec getPartitionsSpec();
+  public abstract PartitionsSpec getPartitionsSpec();
 
-  IndexSpec getIndexSpec();
+  public abstract IndexSpec getIndexSpec();
 
-  IndexSpec getIndexSpecForIntermediatePersists();
+  public abstract IndexSpec getIndexSpecForIntermediatePersists();
 }

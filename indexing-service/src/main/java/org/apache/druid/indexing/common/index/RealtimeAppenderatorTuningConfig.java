@@ -37,7 +37,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 
 @JsonTypeName("realtime_appenderator")
-public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
+public class RealtimeAppenderatorTuningConfig extends AppenderatorConfig
 {
   private static final Period DEFAULT_INTERMEDIATE_PERSIST_PERIOD = new Period("PT10M");
   private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
@@ -52,8 +52,6 @@ public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
     return FileUtils.createTempDir("druid-realtime-persist");
   }
 
-  private final int maxRowsInMemory;
-  private final long maxBytesInMemory;
   private final DynamicPartitionsSpec partitionsSpec;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
@@ -92,10 +90,7 @@ public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
   )
   {
-    this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
-    // initializing this to 0, it will be lazily intialized to a value
-    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfig#getMaxBytesInMemoryOrDefault(long)
-    this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+    super(maxRowsInMemory, maxBytesInMemory);
     this.partitionsSpec = new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? DEFAULT_INTERMEDIATE_PERSIST_PERIOD
@@ -132,20 +127,6 @@ public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
-  }
-
-  @Override
-  @JsonProperty
-  public int getMaxRowsInMemory()
-  {
-    return maxRowsInMemory;
-  }
-
-  @Override
-  @JsonProperty
-  public long getMaxBytesInMemory()
-  {
-    return maxBytesInMemory;
   }
 
   @Override

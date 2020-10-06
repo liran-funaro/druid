@@ -41,7 +41,7 @@ import java.io.File;
 /**
  *
  */
-public class RealtimeTuningConfig implements AppenderatorConfig
+public class RealtimeTuningConfig extends AppenderatorConfig
 {
   private static final Period DEFAULT_INTERMEDIATE_PERSIST_PERIOD = new Period("PT10M");
   private static final Period DEFAULT_WINDOW_PERIOD = new Period("PT10M");
@@ -86,8 +86,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
     );
   }
 
-  private final int maxRowsInMemory;
-  private final long maxBytesInMemory;
   private final Period intermediatePersistPeriod;
   private final Period windowPeriod;
   private final File basePersistDirectory;
@@ -131,10 +129,7 @@ public class RealtimeTuningConfig implements AppenderatorConfig
       @JsonProperty("dedupColumn") @Nullable String dedupColumn
   )
   {
-    this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
-    // initializing this to 0, it will be lazily initialized to a value
-    // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfig#getMaxBytesInMemoryOrDefault(long)
-    this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+    super(maxRowsInMemory, maxBytesInMemory);
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? DEFAULT_INTERMEDIATE_PERSIST_PERIOD
                                      : intermediatePersistPeriod;
@@ -163,20 +158,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     this.dedupColumn = dedupColumn == null ? DEFAULT_DEDUP_COLUMN : dedupColumn;
-  }
-
-  @Override
-  @JsonProperty
-  public int getMaxRowsInMemory()
-  {
-    return maxRowsInMemory;
-  }
-
-  @Override
-  @JsonProperty
-  public long getMaxBytesInMemory()
-  {
-    return maxBytesInMemory;
   }
 
   @Override

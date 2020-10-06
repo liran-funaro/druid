@@ -26,17 +26,25 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.io.File;
 
-public interface AppenderatorConfig extends TuningConfig
+public abstract class AppenderatorConfig extends TuningConfig
 {
-  boolean isReportParseExceptions();
+  protected AppenderatorConfig(
+      @Nullable Integer maxRowsInMemory,
+      @Nullable Long maxBytesInMemory
+  )
+  {
+    super(maxRowsInMemory, maxBytesInMemory);
+  }
 
-  int getMaxPendingPersists();
+  public abstract boolean isReportParseExceptions();
+
+  public abstract int getMaxPendingPersists();
 
   /**
    * Maximum number of rows in a single segment before pushing to deep storage
    */
   @Nullable
-  default Integer getMaxRowsPerSegment()
+  public Integer getMaxRowsPerSegment()
   {
     return Integer.MAX_VALUE;
   }
@@ -45,7 +53,7 @@ public interface AppenderatorConfig extends TuningConfig
    * Maximum number of rows across all segments before pushing to deep storage
    */
   @Nullable
-  default Long getMaxTotalRows()
+  public Long getMaxTotalRows()
   {
     throw new UnsupportedOperationException("maxTotalRows is not implemented.");
   }
@@ -53,12 +61,12 @@ public interface AppenderatorConfig extends TuningConfig
   /**
    * Period that sets frequency to persist to local storage if no other thresholds are met
    */
-  Period getIntermediatePersistPeriod();
+  public abstract Period getIntermediatePersistPeriod();
 
-  File getBasePersistDirectory();
+  public abstract File getBasePersistDirectory();
 
-  AppenderatorConfig withBasePersistDirectory(File basePersistDirectory);
+  public abstract AppenderatorConfig withBasePersistDirectory(File basePersistDirectory);
 
   @Nullable
-  SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory();
+  public abstract SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory();
 }

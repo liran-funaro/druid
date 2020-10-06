@@ -1110,16 +1110,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
-  public static class IndexTuningConfig implements AppenderatorConfig
+  public static class IndexTuningConfig extends AppenderatorConfig
   {
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
     private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
     private static final boolean DEFAULT_GUARANTEE_ROLLUP = false;
     private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;
     private static final long DEFAULT_PUSH_TIMEOUT = 0;
-
-    private final int maxRowsInMemory;
-    private final long maxBytesInMemory;
 
     // null if all partitionsSpec related params are null. see getDefaultPartitionsSpec() for details.
     @Nullable
@@ -1262,10 +1259,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @Nullable Integer maxSavedParseExceptions
     )
     {
-      this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
-      // initializing this to 0, it will be lazily initialized to a value
-      // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfig#getMaxBytesInMemoryOrDefault(long)
-      this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+      super(maxRowsInMemory, maxBytesInMemory);
       this.partitionsSpec = partitionsSpec;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
       this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
@@ -1335,20 +1329,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxParseExceptions,
           maxSavedParseExceptions
       );
-    }
-
-    @JsonProperty
-    @Override
-    public int getMaxRowsInMemory()
-    {
-      return maxRowsInMemory;
-    }
-
-    @JsonProperty
-    @Override
-    public long getMaxBytesInMemory()
-    {
-      return maxBytesInMemory;
     }
 
     @JsonProperty
