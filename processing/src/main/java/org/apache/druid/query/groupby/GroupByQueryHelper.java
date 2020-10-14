@@ -100,7 +100,6 @@ public class GroupByQueryHelper
           }
         }
     );
-    final IncrementalIndex index;
 
     final boolean sortResults = query.getContextValue(CTX_KEY_SORT_RESULTS, true);
 
@@ -117,23 +116,17 @@ public class GroupByQueryHelper
         .withMinTimestamp(granTimeStart.getMillis())
         .build();
 
-    if (query.getContextValue("useOffheap", false)) {
-      index = new IncrementalIndex.Builder()
-          .setIndexSchema(indexSchema)
-          .setDeserializeComplexMetrics(false)
-          .setConcurrentEventAdd(true)
-          .setSortFacts(sortResults)
-          .setMaxRowCount(querySpecificConfig.getMaxResults())
-          .buildOffheap(bufferPool);
-    } else {
-      index = new IncrementalIndex.Builder()
-          .setIndexSchema(indexSchema)
-          .setDeserializeComplexMetrics(false)
-          .setConcurrentEventAdd(true)
-          .setSortFacts(sortResults)
-          .setMaxRowCount(querySpecificConfig.getMaxResults())
-          .buildOnheap();
-    }
+    final String indexType = query.getContextValue("indexType",
+        query.getContextValue("useOffheap", false) ? "offheap" : "onheap");
+
+    final IncrementalIndex index = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setDeserializeComplexMetrics(false)
+        .setConcurrentEventAdd(true)
+        .setSortFacts(sortResults)
+        .setMaxRowCount(querySpecificConfig.getMaxResults())
+        .setIncrementalIndexType(indexType)
+        .build(bufferPool);
 
     Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()
     {

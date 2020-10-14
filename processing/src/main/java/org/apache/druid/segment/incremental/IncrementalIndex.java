@@ -453,6 +453,22 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       }
     }
 
+    public IncrementalIndex build(final NonBlockingPool<ByteBuffer> bufferPool)
+    {
+      log.info("Building incremental index of type: %s", incrementalIndexType);
+
+      switch (incrementalIndexType) {
+        case "onheap":
+          return buildOnheap();
+        case "offheap":
+          return buildOffheap(bufferPool);
+        case "oak":
+          return buildOak();
+        default:
+          throw new IllegalArgumentException("Unsupported incremental index: " + incrementalIndexType);
+      }
+    }
+
     public OnheapIncrementalIndex buildOnheap()
     {
       if (maxRowCount <= 0) {
