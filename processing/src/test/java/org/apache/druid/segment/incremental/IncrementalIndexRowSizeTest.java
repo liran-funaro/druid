@@ -19,29 +19,54 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.segment.CloserRule;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
 {
+  public final IncrementalIndexCreator indexCreator;
+
+  @Rule
+  public final CloserRule closer = new CloserRule(false);
+
+  public IncrementalIndexRowSizeTest(String indexType) throws JsonProcessingException
+  {
+    indexCreator = closer.closeLater(
+        new IncrementalIndexCreator(indexType, (builder, args) -> builder
+            .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
+            .setMaxRowCount(10_000)
+            .setMaxBytesInMemory(1_000)
+            .build())
+    );
+  }
+
+  @Parameterized.Parameters(name = "{index}: {0}")
+  public static Collection<?> constructorFeeder()
+  {
+    return IncrementalIndexCreator.getAppendableIndexTypes();
+  }
+
   @Test
   public void testIncrementalIndexRowSizeBasic()
   {
-    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
-        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
-        .setMaxRowCount(10000)
-        .setMaxBytesInMemory(1000)
-        .build();
+    IncrementalIndex<?> index = indexCreator.createIndex();
     long time = System.currentTimeMillis();
     IncrementalIndex.IncrementalIndexRowResult tndResult = index.toIncrementalIndexRow(toMapRow(time, "billy", "A", "joe", "B"));
     IncrementalIndexRow td1 = tndResult.getIncrementalIndexRow();
@@ -51,11 +76,7 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
   @Test
   public void testIncrementalIndexRowSizeArr()
   {
-    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
-        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
-        .setMaxRowCount(10000)
-        .setMaxBytesInMemory(1000)
-        .build();
+    IncrementalIndex<?> index = indexCreator.createIndex();
     long time = System.currentTimeMillis();
     IncrementalIndex.IncrementalIndexRowResult tndResult = index.toIncrementalIndexRow(toMapRow(
         time + 1,
@@ -71,11 +92,7 @@ public class IncrementalIndexRowSizeTest extends InitializedNullHandlingTest
   @Test
   public void testIncrementalIndexRowSizeComplex()
   {
-    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
-        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
-        .setMaxRowCount(10000)
-        .setMaxBytesInMemory(1000)
-        .build();
+    IncrementalIndex<?> index = indexCreator.createIndex();
     long time = System.currentTimeMillis();
     IncrementalIndex.IncrementalIndexRowResult tndResult = index.toIncrementalIndexRow(toMapRow(
         time + 1,
