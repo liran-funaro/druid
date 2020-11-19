@@ -32,8 +32,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
- * Since the off-heap incremental index is not yet supported in production ingestion, we define its spec here only
- * for testing purposes.
+ * This extension also bundles the option to use the off-heap index for ingestion, that is not supported by default.
  */
 public class OffheapIncrementalIndexSpec implements AppendableIndexSpec, Supplier<ByteBuffer>
 {

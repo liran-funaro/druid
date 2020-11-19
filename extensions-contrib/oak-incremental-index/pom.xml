@@ -35,6 +35,18 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.yahoo.oak</groupId>
+      <artifactId>oak</artifactId>
+      <version>0.2.3</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-core</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
       <version>${project.parent.version}</version>
@@ -115,14 +127,13 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>joda-time</groupId>
+      <artifactId>joda-time</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
       <version>${jmh.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>joda-time</groupId>
-      <artifactId>joda-time</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
