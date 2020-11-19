@@ -21,69 +21,63 @@ package org.apache.druid.segment.incremental.oak;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Supplier;
-import org.apache.druid.collections.StupidPool;
-import org.apache.druid.segment.incremental.AppendableIndexBuilder;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
-import org.apache.druid.segment.incremental.OffheapIncrementalIndex;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 
 /**
  * Since the off-heap incremental index is not yet supported in production ingestion, we define its spec here only
  * for testing purposes.
  */
-public class OakIncrementalIndexSpec implements AppendableIndexSpec, Supplier<ByteBuffer>
+public class OakIncrementalIndexSpec implements AppendableIndexSpec
 {
   public static final String TYPE = "oak";
-  static final int DEFAULT_BUFFER_SIZE = 1 << 23;
-  static final int DEFAULT_CACHE_SIZE = 1 << 30;
 
-  final int bufferSize;
-  final int cacheSize;
-
-  final StupidPool<ByteBuffer> bufferPool;
+  final long oakMaxMemoryCapacity;
+  final int oakBlockSize;
+  final int oakChunkMaxItems;
 
   @JsonCreator
   public OakIncrementalIndexSpec(
-      final @JsonProperty("bufferSize") @Nullable Integer bufferSize,
-      final @JsonProperty("cacheSize") @Nullable Integer cacheSize
+      final @JsonProperty("oakMaxMemoryCapacity") @Nullable Long oakMaxMemoryCapacity,
+      final @JsonProperty("oakBlockSize") @Nullable Integer oakBlockSize,
+      final @JsonProperty("oakChunkMaxItems") @Nullable Integer oakChunkMaxItems
   )
   {
-    this.bufferSize = bufferSize != null && bufferSize > 0 ? bufferSize : DEFAULT_BUFFER_SIZE;
-    this.cacheSize = cacheSize != null && cacheSize > this.bufferSize ? cacheSize : DEFAULT_CACHE_SIZE;
-    this.bufferPool = new StupidPool<>(
-        "Oak incremental-index buffer pool",
-        this,
-        0,
-        this.cacheSize / this.bufferSize
-    );
+    this.oakMaxMemoryCapacity = oakMaxMemoryCapacity != null && oakMaxMemoryCapacity > 0 ? oakMaxMemoryCapacity :
+        OakIncrementalIndex.Builder.DEFAULT_OAK_MAX_MEMORY_CAPACITY;
+    this.oakBlockSize = oakBlockSize != null && oakBlockSize > 0 ? oakBlockSize :
+        OakIncrementalIndex.Builder.DEFAULT_OAK_BLOCK_SIZE;
+    this.oakChunkMaxItems = oakChunkMaxItems != null && oakChunkMaxItems > 0 ? oakChunkMaxItems :
+        OakIncrementalIndex.Builder.DEFAULT_OAK_CHUNK_MAX_ITEMS;
   }
 
   @JsonProperty
-  public int getBufferSize()
+  public long getOakMaxMemoryCapacity()
   {
-    return bufferSize;
+    return oakMaxMemoryCapacity;
   }
 
   @JsonProperty
-  public int getCacheSize()
+  public int getOakBlockSize()
   {
-    return cacheSize;
+    return oakBlockSize;
+  }
+
+  @JsonProperty
+  public int getOakChunkMaxItems()
+  {
+    return oakChunkMaxItems;
   }
 
   @Override
-  public ByteBuffer get()
+  public OakIncrementalIndex.Builder builder()
   {
-    return ByteBuffer.allocateDirect(bufferSize);
-  }
-
-  @Override
-  public AppendableIndexBuilder builder()
-  {
-    return new OffheapIncrementalIndex.Builder().setBufferPool(bufferPool);
+    return new OakIncrementalIndex.Builder()
+        .setOakMaxMemoryCapacity(oakMaxMemoryCapacity)
+        .setOakBlockSize(oakBlockSize)
+        .setOakChunkMaxItems(oakChunkMaxItems);
   }
 
   @Override
