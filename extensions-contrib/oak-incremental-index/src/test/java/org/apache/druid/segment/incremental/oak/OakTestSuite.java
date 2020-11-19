@@ -34,7 +34,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    OakIncrementalIndexDummyInitTest.class,
+    OakDummyInitTest.class,
     org.apache.druid.segment.data.IncrementalIndexTest.class,
     IncrementalIndexTest.class,
     IncrementalIndexStorageAdapterTest.class,
@@ -44,6 +44,6 @@ import org.junit.runners.Suite;
     IncrementalIndexIngestionTest.class,
     IncrementalIndexAdapterTest.class,
 })
-public class OakIncrementalIndexTestSuite
+public class OakTestSuite
 {
 }

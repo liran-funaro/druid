@@ -32,12 +32,13 @@ import java.util.Collection;
  * Even before @BeforeClass annotated methods.
  */
 @RunWith(Parameterized.class)
-public class OakIncrementalIndexDummyInitTest
+public class OakDummyInitTest
 {
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder()
   {
-    IncrementalIndexCreator.addIndexSpec(OffheapIncrementalIndexSpec.class, "oak");
+    // Add Oak to the available incremental indexes
+    IncrementalIndexCreator.addIndexSpec(OakIncrementalIndexSpec.class, "oak");
     return ImmutableList.of();
   }
 }

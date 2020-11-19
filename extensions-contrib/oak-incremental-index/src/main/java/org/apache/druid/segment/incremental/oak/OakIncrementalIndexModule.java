@@ -29,9 +29,15 @@ import org.apache.druid.java.util.common.logger.Logger;
 import java.util.Collections;
 import java.util.List;
 
-public class OffheapIncrementalIndexModule implements DruidModule
+public class OakIncrementalIndexModule implements DruidModule
 {
-  private static final Logger log = new Logger(OffheapIncrementalIndexModule.class);
+  private static final Logger log = new Logger(OakIncrementalIndexModule.class);
+
+  public static final Module JACKSON_MODULE = new SimpleModule("OakIncrementalIndexModule")
+      .registerSubtypes(
+          new NamedType(OakIncrementalIndexSpec.class, OakIncrementalIndexSpec.TYPE),
+          new NamedType(OffheapIncrementalIndexSpec.class, OffheapIncrementalIndexSpec.TYPE)
+      );
 
   @Override
   public void configure(Binder binder)
@@ -42,11 +48,6 @@ public class OffheapIncrementalIndexModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Collections.<Module>singletonList(
-        new SimpleModule("OffheapIncrementalIndexModule")
-            .registerSubtypes(
-                new NamedType(OffheapIncrementalIndexSpec.class, OffheapIncrementalIndexSpec.TYPE)
-            )
-    );
+    return Collections.singletonList(JACKSON_MODULE);
   }
 }
