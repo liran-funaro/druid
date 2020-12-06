@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.incremental.oak;
+package org.apache.druid.segment.incremental;
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -32,8 +32,6 @@ import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
-import org.apache.druid.segment.incremental.IncrementalIndex;
-import org.apache.druid.segment.incremental.IncrementalIndexRow;
 import sun.misc.Unsafe;
 
 import javax.annotation.Nullable;

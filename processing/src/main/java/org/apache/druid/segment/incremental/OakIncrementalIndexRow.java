@@ -17,13 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.segment.incremental.oak;
+package org.apache.druid.segment.incremental;
 
 import com.yahoo.oak.OakUnsafeDirectBuffer;
 import com.yahoo.oak.OakUnscopedBuffer;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndex.DimensionDesc;
-import org.apache.druid.segment.incremental.IncrementalIndexRow;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.incremental.oak;
+package org.apache.druid.segment.incremental;
 
 
 import com.google.common.base.Supplier;
@@ -44,12 +44,6 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionIndexer;
-import org.apache.druid.segment.incremental.AppendableIndexBuilder;
-import org.apache.druid.segment.incremental.IncrementalIndex;
-import org.apache.druid.segment.incremental.IncrementalIndexRow;
-import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
 import javax.annotation.Nullable;
 import javax.xml.ws.Holder;

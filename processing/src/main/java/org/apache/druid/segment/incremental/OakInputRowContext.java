@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.incremental.oak;
+package org.apache.druid.segment.incremental;
 
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;

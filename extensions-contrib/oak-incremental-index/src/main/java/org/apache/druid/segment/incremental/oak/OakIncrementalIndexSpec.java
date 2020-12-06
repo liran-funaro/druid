@@ -22,6 +22,7 @@ package org.apache.druid.segment.incremental.oak;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
+import org.apache.druid.segment.incremental.OakIncrementalIndex;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
