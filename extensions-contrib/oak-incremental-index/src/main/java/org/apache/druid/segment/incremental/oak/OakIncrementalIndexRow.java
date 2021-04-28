@@ -38,7 +38,6 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   private final OakUnsafeDirectBuffer oakAggregations;
   @Nullable
   private ByteBuffer aggregationsBuffer;
-  private int aggregationsOffset;
   private int dimsLength;
   @Nullable
   private OakKey.StringDim stringDim;
@@ -52,7 +51,6 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     this.oakAggregations = (OakUnsafeDirectBuffer) aggregations;
     this.dimensions = oakDimensions.getAddress();
     this.aggregationsBuffer = null;
-    this.aggregationsOffset = 0;
     this.dimsLength = -1; // lazy initialization
     this.stringDim = null;
   }
@@ -70,7 +68,6 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     dimsLength = -1;
     dimensions = oakDimensions.getAddress();
     aggregationsBuffer = null;
-    aggregationsOffset = 0;
     if (stringDim != null) {
       stringDim.reset(dimensions);
     }
@@ -80,7 +77,6 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   {
     if (aggregationsBuffer == null) {
       aggregationsBuffer = oakAggregations.getByteBuffer();
-      aggregationsOffset = oakAggregations.getOffset();
     }
   }
 
@@ -88,12 +84,6 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   {
     updateAggregationsBuffer();
     return aggregationsBuffer;
-  }
-
-  public int getAggregationsOffset()
-  {
-    updateAggregationsBuffer();
-    return aggregationsOffset;
   }
 
   @Override

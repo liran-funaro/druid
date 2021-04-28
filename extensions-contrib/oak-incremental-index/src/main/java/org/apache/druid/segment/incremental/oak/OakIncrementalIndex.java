@@ -249,50 +249,45 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
     throw new UnsupportedOperationException();
   }
 
-  private int getOffsetInBuffer(int aggOffset, int aggIndex)
+  private int getOffsetInBuffer(int aggIndex)
   {
     assert aggregatorOffsetInBuffer != null;
-    return aggOffset + aggregatorOffsetInBuffer[aggIndex];
-  }
-
-  private int getOffsetInBuffer(OakIncrementalIndexRow oakRow, int aggIndex)
-  {
-    return getOffsetInBuffer(oakRow.getAggregationsOffset(), aggIndex);
+    return aggregatorOffsetInBuffer[aggIndex];
   }
 
   @Override
   protected float getMetricFloatValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
   {
     OakIncrementalIndexRow oakRow = (OakIncrementalIndexRow) incrementalIndexRow;
-    return getAggs()[aggIndex].getFloat(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
+    return getAggs()[aggIndex].getFloat(oakRow.getAggregationsBuffer(), getOffsetInBuffer(aggIndex));
   }
 
   @Override
   protected long getMetricLongValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
   {
     OakIncrementalIndexRow oakRow = (OakIncrementalIndexRow) incrementalIndexRow;
-    return getAggs()[aggIndex].getLong(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
+    return getAggs()[aggIndex].getLong(oakRow.getAggregationsBuffer(), getOffsetInBuffer(aggIndex));
   }
 
   @Override
   protected Object getMetricObjectValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
   {
     OakIncrementalIndexRow oakRow = (OakIncrementalIndexRow) incrementalIndexRow;
-    return getAggs()[aggIndex].get(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
+    return getAggs()[aggIndex].get(oakRow.getAggregationsBuffer(), getOffsetInBuffer(aggIndex));
   }
 
   @Override
   protected double getMetricDoubleValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
   {
     OakIncrementalIndexRow oakRow = (OakIncrementalIndexRow) incrementalIndexRow;
-    return getAggs()[aggIndex].getDouble(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
+    return getAggs()[aggIndex].getDouble(oakRow.getAggregationsBuffer(), getOffsetInBuffer(aggIndex));
   }
 
   @Override
   protected boolean isNull(IncrementalIndexRow incrementalIndexRow, int aggIndex)
   {
     OakIncrementalIndexRow oakRow = (OakIncrementalIndexRow) incrementalIndexRow;
-    return getAggs()[aggIndex].isNull(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
+    return getAggs()[aggIndex].isNull(oakRow.getAggregationsBuffer(), getOffsetInBuffer(aggIndex));
   }
 
   @Override
@@ -332,9 +327,8 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
       }
 
       ByteBuffer valueBuff = valueOakBuff.getByteBuffer();
-      int valueOffset = valueOakBuff.getOffset();
       for (int i = 0; i < aggregators.length; ++i) {
-        Object theVal = aggregators[i].get(valueBuff, valueOffset + aggregatorOffsetInBuffer[i]);
+        Object theVal = aggregators[i].get(valueBuff, getOffsetInBuffer(i));
         theVals.put(metrics[i].getName(), theVal);
       }
 
@@ -378,7 +372,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
     return new BufferAggregator[metrics.length];
   }
 
-  public void initAggValue(OakInputRowContext ctx, ByteBuffer aggBuffer, int aggOffset)
+  public void initAggValue(OakInputRowContext ctx, ByteBuffer aggBuffer)
   {
     AggregatorFactory[] metrics = getMetricAggs();
     BufferAggregator[] aggregators = getAggs();
@@ -402,19 +396,19 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
     }
 
     for (int i = 0; i < metrics.length; i++) {
-      aggregators[i].init(aggBuffer, getOffsetInBuffer(aggOffset, i));
+      aggregators[i].init(aggBuffer, getOffsetInBuffer(i));
     }
 
-    aggregate(ctx, aggBuffer, aggOffset);
+    aggregate(ctx, aggBuffer);
   }
 
   public void aggregate(OakInputRowContext ctx, OakBuffer buffer)
   {
     OakUnsafeDirectBuffer unsafeBuffer = (OakUnsafeDirectBuffer) buffer;
-    aggregate(ctx, unsafeBuffer.getByteBuffer(), unsafeBuffer.getOffset());
+    aggregate(ctx, unsafeBuffer.getByteBuffer());
   }
 
-  public void aggregate(OakInputRowContext ctx, ByteBuffer aggBuffer, int aggOffset)
+  public void aggregate(OakInputRowContext ctx, ByteBuffer aggBuffer)
   {
     final BufferAggregator[] aggregators = getAggs();
 
@@ -424,7 +418,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
       final BufferAggregator agg = aggregators[i];
 
       try {
-        agg.aggregate(aggBuffer, getOffsetInBuffer(aggOffset, i));
+        agg.aggregate(aggBuffer, getOffsetInBuffer(i));
       }
       catch (ParseException e) {
         // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
@@ -446,7 +440,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
     public void serialize(OakInputRowContext ctx, OakScopedWriteBuffer buffer)
     {
       OakUnsafeDirectBuffer unsafeBuffer = (OakUnsafeDirectBuffer) buffer;
-      initAggValue(ctx, unsafeBuffer.getByteBuffer(), unsafeBuffer.getOffset());
+      initAggValue(ctx, unsafeBuffer.getByteBuffer());
     }
 
     @Override
