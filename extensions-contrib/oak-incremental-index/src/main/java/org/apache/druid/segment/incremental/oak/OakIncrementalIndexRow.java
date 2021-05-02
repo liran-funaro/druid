@@ -73,16 +73,11 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     }
   }
 
-  private void updateAggregationsBuffer()
+  public ByteBuffer getAggregationsBuffer()
   {
     if (aggregationsBuffer == null) {
       aggregationsBuffer = oakAggregations.getByteBuffer();
     }
-  }
-
-  public ByteBuffer getAggregationsBuffer()
-  {
-    updateAggregationsBuffer();
     return aggregationsBuffer;
   }
 
